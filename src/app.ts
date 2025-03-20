@@ -6,7 +6,9 @@ import rateLimit from 'express-rate-limit';
 import dotenv from 'dotenv';
 import { PrismaClient } from '@prisma/client';
 import path from 'path';
-import SwaggerConfig from './swagger';
+import swaggerJSDoc from 'swagger-jsdoc';
+import swaggerUi from 'swagger-ui-express';
+import { version } from '../package.json';
 import AuthMiddleware from './swagger/middleware/auth.middleware';
 
 // Carrega variáveis de ambiente
@@ -31,12 +33,18 @@ class App {
       log: process.env.NODE_ENV === 'development' ? ['query', 'error', 'warn'] : ['error'],
       errorFormat: 'pretty',
     });
-    this.initializeMiddlewares();
-    this.initializeRoutes();
-    this.initializeErrorHandling();
     
-    // Inicializa o Swagger
-    SwaggerConfig.setup(this.app);
+    // Inicializa middlewares básicos primeiro
+    this.initializeBasicMiddlewares();
+    
+    // Configura Swagger (antes das rotas e middleware 404)
+    this.setupSwagger();
+    
+    // Inicializa outras rotas
+    this.initializeRoutes();
+    
+    // Inicializa tratamento de erros por último
+    this.initializeErrorHandling();
   }
 
   /**
@@ -81,9 +89,9 @@ class App {
   }
 
   /**
-   * Inicializa os middlewares globais da aplicação
+   * Inicializa os middlewares básicos da aplicação
    */
-  private initializeMiddlewares(): void {
+  private initializeBasicMiddlewares(): void {
     // Segurança
     this.app.use(helmet({
       contentSecurityPolicy: {
@@ -104,10 +112,6 @@ class App {
       methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH'],
       allowedHeaders: ['Content-Type', 'Authorization']
     }));
-
-    // Autenticação para rotas da documentação Swagger
-    // Use o middleware como uma função, não como um objeto
-    this.app.use((req, res, next) => AuthMiddleware(req, res, next));
     
     // Compressão para melhorar performance
     this.app.use(compression());
@@ -135,6 +139,110 @@ class App {
       console.log(`[${new Date().toISOString()}] ${req.method} ${req.url}`);
       next();
     });
+  }
+
+  /**
+   * Configura o Swagger para documentação da API
+   */
+  private setupSwagger(): void {
+    console.log('Configurando Swagger...');
+    
+    // Opções básicas de configuração
+    const swaggerOptions: swaggerJSDoc.Options = {
+      definition: {
+        openapi: '3.0.0',
+        info: {
+          title: 'AdvanceMais API',
+          version: version || '1.0.0',
+          description: 'Documentação da API do AdvanceMais',
+          contact: {
+            name: 'Suporte AdvanceMais',
+            email: 'suporte@advancemais.com.br'
+          },
+          license: {
+            name: 'Proprietária',
+          },
+        },
+        servers: [
+          {
+            url: `http://localhost:${process.env.PORT || 3000}`,
+            description: 'Servidor de Desenvolvimento',
+          },
+          {
+            url: 'https://api-advancemais.onrender.com',
+            description: 'Servidor de Produção',
+          },
+        ],
+        components: {
+          securitySchemes: {
+            bearerAuth: {
+              type: 'http',
+              scheme: 'bearer',
+              bearerFormat: 'JWT',
+            },
+          },
+        },
+      },
+      // Caminhos para arquivos com anotações JSDoc
+      apis: [
+        path.join(__dirname, './swagger/schemas/*.js'),  // Arquivos compilados JS
+        path.join(__dirname, './api-gateway/routes/*.js'),
+        path.join(__dirname, './api-gateway/controllers/*.js'),
+        path.join(__dirname, './services/**/routes/*.js'),
+        path.join(__dirname, './services/**/controllers/*.js'),
+      ],
+    };
+
+    try {
+      // Gera a especificação Swagger
+      const swaggerSpec = swaggerJSDoc(swaggerOptions);
+      
+      // Verifique se há credenciais no ambiente
+      const hasCredentials = process.env.DOCS_USERNAME && process.env.DOCS_PASSWORD;
+      if (!hasCredentials) {
+        console.warn('⚠️ Aviso: Credenciais para Swagger não configuradas. A documentação ficará sem proteção.');
+        console.warn('⚠️ Configure DOCS_USERNAME e DOCS_PASSWORD nas variáveis de ambiente.');
+      }
+      
+      // Rota para documentação (com proteção por autenticação)
+      this.app.use('/api-docs', (req: Request, res: Response, next: NextFunction) => {
+        AuthMiddleware(req, res, next);
+      }, swaggerUi.serve);
+      
+      // Configuração do Swagger UI
+      this.app.get('/api-docs', swaggerUi.setup(swaggerSpec, {
+        explorer: true,
+        customCss: `
+          .swagger-ui .topbar { display: none }
+          body { font-family: 'Nunito', -apple-system, BlinkMacSystemFont, 'SF Pro Text', sans-serif; }
+          .swagger-ui .btn.execute { background-color: #2ecc71; border-color: #2ecc71; }
+          .swagger-ui .btn.execute:hover { background-color: #27ae60; }
+        `,
+        customSiteTitle: 'AdvanceMais API - Documentação',
+        swaggerOptions: {
+          persistAuthorization: true,
+          filter: true,
+          displayRequestDuration: true,
+        }
+      }));
+      
+      // Rota para acessar a especificação em formato JSON (também protegida)
+      this.app.get('/api-docs.json', (req: Request, res: Response, next: NextFunction) => {
+        AuthMiddleware(req, res, next);
+      }, (req: Request, res: Response) => {
+        res.setHeader('Content-Type', 'application/json');
+        res.send(swaggerSpec);
+      });
+      
+      // Adicione rotas alternativas (redirecionamento)
+      this.app.get('/api/docs/v1', (_req: Request, res: Response) => {
+        res.redirect('/api-docs');
+      });
+      
+      console.log('✅ Documentação Swagger configurada com sucesso em /api-docs');
+    } catch (error) {
+      console.error('❌ Erro ao configurar Swagger:', error);
+    }
   }
 
   /**
@@ -214,7 +322,7 @@ class App {
    * Inicializa o tratamento global de erros
    */
   private initializeErrorHandling(): void {
-    // Tratamento de rotas não encontradas
+    // Tratamento de rotas não encontradas - DEVE SER A ÚLTIMA ROTA
     this.app.use((_req: Request, res: Response) => {
       res.status(404).json({
         status: 'error',
