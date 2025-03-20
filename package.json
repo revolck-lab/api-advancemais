@@ -4,7 +4,8 @@
   "main": "app.js",
   "scripts": {
     "test": "jest",
-    "dev": "nodemon src/config/server.js"
+    "dev": "nodemon src/config/server.js",
+    "release": "semantic-release"
   },
   "keywords": [],
   "author": "",
