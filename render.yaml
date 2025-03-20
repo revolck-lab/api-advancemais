@@ -1,0 +1,27 @@
+services:
+  - type: web
+    name: advancemais-api
+    env: node
+    plan: starter
+    buildCommand: npm install && npm run build && npm run prisma:generate
+    startCommand: npm start
+    healthCheckPath: /api/health
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: PORT
+        value: 10000
+      - key: DATABASE_URL
+        sync: false
+      - key: JWT_SECRET
+        sync: false
+      - key: CORS_ORIGIN
+        value: "https://advancemais.com.br"
+      - key: BCRYPT_SALT_ROUNDS
+        value: 10
+      - key: LOG_LEVEL
+        value: info
+      - key: RATE_LIMIT_WINDOW_MS
+        value: 900000
+      - key: RATE_LIMIT_MAX
+        value: 100

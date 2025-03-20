@@ -6,6 +6,7 @@ import rateLimit from 'express-rate-limit';
 import dotenv from 'dotenv';
 import { PrismaClient } from '@prisma/client';
 import path from 'path';
+import SwaggerConfig from './swagger';
 
 // Carrega variáveis de ambiente
 dotenv.config();
@@ -28,6 +29,9 @@ class App {
     this.initializeMiddlewares();
     this.initializeRoutes();
     this.initializeErrorHandling();
+    
+    // Inicializa o Swagger
+    SwaggerConfig.setup(this.app);
   }
 
   /**
@@ -45,7 +49,18 @@ class App {
    */
   private initializeMiddlewares(): void {
     // Segurança
-    this.app.use(helmet());
+    this.app.use(helmet({
+      contentSecurityPolicy: {
+        directives: {
+          defaultSrc: ["'self'"],
+          scriptSrc: ["'self'", "'unsafe-inline'", 'https://fonts.googleapis.com'],
+          styleSrc: ["'self'", "'unsafe-inline'", 'https://fonts.googleapis.com'],
+          imgSrc: ["'self'", 'data:'],
+          fontSrc: ["'self'", 'https://fonts.gstatic.com'],
+          connectSrc: ["'self'"]
+        }
+      }
+    }));
     
     // CORS
     this.app.use(cors({
@@ -59,8 +74,8 @@ class App {
     
     // Limita taxa de requisições para evitar abusos
     const limiter = rateLimit({
-      windowMs: 15 * 60 * 1000, // 15 minutos
-      limit: 100, // limite de 100 requisições por IP
+      windowMs: parseInt(process.env.RATE_LIMIT_WINDOW_MS || '900000', 10), // 15 minutos por padrão
+      limit: parseInt(process.env.RATE_LIMIT_MAX || '100', 10), // limite por IP
       standardHeaders: true,
       legacyHeaders: false,
     });
@@ -87,13 +102,40 @@ class App {
    * Aqui serão importadas as rotas definidas em api-gateway/routes
    */
   private initializeRoutes(): void {
-    // Rota de status/health check
-    this.app.get('/api/health', (_req: Request, res: Response) => {
-      res.status(200).json({
-        status: 'ok',
-        timestamp: new Date().toISOString(),
-        version: process.env.npm_package_version || '1.0.0'
-      });
+    // Rota raiz para servir a página inicial
+    this.app.get('/', (_req: Request, res: Response) => {
+      res.sendFile(path.join(__dirname, '../public/index.html'));
+    });
+    
+    // Rota de status/health check aprimorada
+    this.app.get('/api/health', async (_req: Request, res: Response) => {
+      try {
+        // Verifica a conexão do banco de dados
+        await this.prisma.$queryRaw`SELECT 1`;
+        
+        res.status(200).json({
+          status: 'ok',
+          timestamp: new Date().toISOString(),
+          version: process.env.npm_package_version || '1.0.0',
+          environment: process.env.NODE_ENV || 'development',
+          database: 'connected',
+          uptime: process.uptime(),
+          services: {
+            auth: 'available',
+            payment: 'available',
+            notification: 'available',
+            cms: 'available'
+          }
+        });
+      } catch (error) {
+        res.status(500).json({
+          status: 'error',
+          timestamp: new Date().toISOString(),
+          version: process.env.npm_package_version || '1.0.0',
+          database: 'disconnected',
+          error: process.env.NODE_ENV === 'production' ? 'Database connection error' : error
+        });
+      }
     });
 
     // TODO: Importar e usar as rotas principais conforme elas forem criadas

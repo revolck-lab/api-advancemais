@@ -1,0 +1,92 @@
+/* Estilos personalizados para o Swagger */
+:root {
+    --primary-color: #3498db;
+    --secondary-color: #2ecc71;
+    --dark-color: #2c3e50;
+    --light-color: #ecf0f1;
+  }
+  
+  .swagger-ui .topbar {
+    background-color: var(--dark-color);
+  }
+  
+  /* Logo da empresa */
+  .swagger-ui .topbar-wrapper a.link img {
+    content: url('/docs/logo.png');
+    height: 40px;
+  }
+  
+  .swagger-ui .topbar .download-url-wrapper .select-label {
+    color: white;
+  }
+  
+  /* Cores dos métodos HTTP */
+  .swagger-ui .opblock.opblock-get {
+    border-color: #61affe;
+    background: rgba(97, 175, 254, 0.1);
+  }
+  
+  .swagger-ui .opblock.opblock-post {
+    border-color: #49cc90;
+    background: rgba(73, 204, 144, 0.1);
+  }
+  
+  .swagger-ui .opblock.opblock-put {
+    border-color: #fca130;
+    background: rgba(252, 161, 48, 0.1);
+  }
+  
+  .swagger-ui .opblock.opblock-delete {
+    border-color: #f93e3e;
+    background: rgba(249, 62, 62, 0.1);
+  }
+  
+  /* Cabeçalho da página */
+  .swagger-ui .info .title {
+    color: var(--dark-color);
+    font-size: 36px;
+  }
+  
+  .swagger-ui .info {
+    margin: 30px 0;
+  }
+  
+  /* Botões */
+  .swagger-ui .btn.execute {
+    background-color: var(--secondary-color);
+    border-color: var(--secondary-color);
+    transition: all 0.3s ease;
+  }
+  
+  .swagger-ui .btn.execute:hover {
+    background-color: #27ae60;
+  }
+  
+  /* Tabelas de resposta */
+  .swagger-ui table tbody tr td {
+    padding: 10px;
+  }
+  
+  /* Esquemas */
+  .swagger-ui .model-box {
+    background: rgba(52, 152, 219, 0.1);
+  }
+  
+  /* Melhorar a legibilidade */
+  .swagger-ui .markdown p, 
+  .swagger-ui .renderedMarkdown p {
+    font-size: 16px;
+    line-height: 1.6;
+  }
+  
+  /* Fonte global */
+  .swagger-ui {
+    font-family: 'Inter', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+  }
+  
+  /* Melhorar o espaçamento entre seções */
+  .swagger-ui .opblock {
+    margin-bottom: 20px;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+    border-radius: 5px;
+  }

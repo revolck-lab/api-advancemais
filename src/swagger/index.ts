@@ -1,6 +1,6 @@
 import swaggerJSDoc from 'swagger-jsdoc';
 import swaggerUi from 'swagger-ui-express';
-import { Express } from 'express';
+import { Application } from 'express';
 import path from 'path';
 import { version } from '../../package.json';
 
@@ -10,9 +10,9 @@ import { version } from '../../package.json';
 export default class SwaggerConfig {
   /**
    * Inicializa a documentação Swagger na aplicação Express
-   * @param app - Instância do Express
+   * @param app - Instância da aplicação Express
    */
-  public static setup(app: Express): void {
+  public static setup(app: Application): void { // Modificado para Application
     // Opções básicas de configuração
     const swaggerOptions: swaggerJSDoc.Options = {
       definition: {
