@@ -1,4 +1,3 @@
-// src/gateway/routes/index.ts
 import { Application, Router, Request, Response } from 'express';
 import path from 'path';
 import apiRoutes from './api.routes';

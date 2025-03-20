@@ -1,6 +1,5 @@
 import { Router } from 'express';
 import paymentRoutes from './payment.routes';
-// Importar outras rotas aqui quando forem criadas
 
 /**
  * Configuração das rotas principais da API
