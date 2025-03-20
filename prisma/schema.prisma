@@ -1,8 +1,5 @@
-// This is your Prisma schema file,
+// This is your Prisma schema file
 // learn more about it in the docs: https://pris.ly/d/prisma-schema
-
-// Looking for ways to speed up your queries, or scale easily with your serverless or edge functions?
-// Try Prisma Accelerate: https://pris.ly/cli/accelerate-init
 
 generator client {
   provider = "prisma-client-js"
@@ -11,4 +8,121 @@ generator client {
 datasource db {
   provider = "mysql"
   url      = env("DATABASE_URL")
+}
+
+// Role model (perfis de usuários no sistema)
+model Role {
+  id         Int       @id @default(autoincrement())
+  name       String    @db.VarChar(255)
+  level      Int
+  status     Int       @default(1)
+  created_at DateTime  @default(now()) @db.Timestamp()
+  updated_at DateTime  @updatedAt @db.Timestamp()
+  
+  // Relacionamentos
+  users      User[]
+  companies  Company[]
+
+  @@map("role")
+}
+
+// Gender model (opções de gênero)
+model Gender {
+  id    Int    @id @default(autoincrement())
+  name  String @db.VarChar(255)
+  
+  // Relacionamentos
+  users User[]
+
+  @@map("gender")
+}
+
+// Education model (níveis de educação)
+model Education {
+  id    Int    @id @default(autoincrement())
+  name  String @db.VarChar(255)
+  
+  // Relacionamentos
+  users User[]
+
+  @@map("education")
+}
+
+// Address model (endereços)
+model Address {
+  id       Int       @id @default(autoincrement())
+  address  String    @db.VarChar(255)
+  city     String    @db.VarChar(100)
+  state    String    @db.VarChar(100)
+  cep      String    @db.Char(8)
+  number   Int       @default(0)
+  state_id Int?
+  
+  // Relacionamentos
+  users     User[]
+  companies Company[]
+
+  @@map("address")
+}
+
+// User model (usuários)
+model User {
+  id           Int       @id @default(autoincrement())
+  name         String    @db.VarChar(255)
+  email        String    @unique @db.VarChar(255)
+  password     String    @db.VarChar(255)
+  birth_date   DateTime  @db.Date()
+  cpf          String    @unique @db.Char(11)
+  phone_user   String    @db.Char(11)
+  gender_id    Int
+  education_id Int
+  status       Int       @default(1) @db.TinyInt
+  code_user    String    @db.VarChar(9)
+  role_id      Int
+  address_id   Int
+  avatar_url   String?   @db.VarChar(255)
+  created_at   DateTime  @default(now()) @db.Timestamp()
+  updated_at   DateTime  @updatedAt @db.Timestamp()
+  
+  // Relacionamentos
+  gender     Gender    @relation(fields: [gender_id], references: [id])
+  education  Education @relation(fields: [education_id], references: [id])
+  role       Role      @relation(fields: [role_id], references: [id])
+  address    Address   @relation(fields: [address_id], references: [id])
+  
+  @@index([gender_id])
+  @@index([education_id])
+  @@index([role_id])
+  @@index([address_id])
+  @@map("user")
+}
+
+// Company model (empresas)
+model Company {
+  id             Int      @id @default(autoincrement())
+  cnpj           String   @unique @db.Char(14)
+  trade_name     String   @db.VarChar(255)
+  business_name  String   @db.VarChar(255)
+  contact_name   String   @db.VarChar(255)
+  address_id     Int
+  whatsapp       String   @db.Char(11)
+  mobile_phone   String   @db.Char(11)
+  landline_phone String?  @db.Char(11)
+  email          String   @unique @db.VarChar(255)
+  password       String   @db.VarChar(255)
+  status         Int      @default(1) @db.TinyInt
+  role_id        Int
+  avatar_url     String?  @db.VarChar(255)
+  created_at     DateTime @default(now()) @db.Timestamp()
+  updated_at     DateTime @updatedAt @db.Timestamp()
+  
+  // Relacionamentos
+  address    Address   @relation(fields: [address_id], references: [id])
+  role       Role      @relation(fields: [role_id], references: [id])
+  
+  @@index([cnpj])
+  @@index([address_id])
+  @@index([email])
+  @@index([role_id])
+  @@map("company")
 }
