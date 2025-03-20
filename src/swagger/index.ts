@@ -35,7 +35,7 @@ export default class SwaggerConfig {
             description: 'Servidor de Desenvolvimento',
           },
           {
-            url: 'https://api.advancemais.com.br',
+            url: 'https://api-advancemais.onrender.com',
             description: 'Servidor de Produção',
           },
         ],
@@ -85,11 +85,12 @@ export default class SwaggerConfig {
     // Gera a especificação Swagger
     const swaggerSpec = swaggerJSDoc(swaggerOptions);
 
-    // Usa um caminho menos óbvio e mais seguro para a documentação
-    const docsPath = '/api/docs/v1';
+    // Usar a rota padrão para simplificar o acesso
+    const docsPath = '/api-docs';
     
-    // Configura o endpoint para a documentação Swagger com opções personalizadas
-    app.use(docsPath, swaggerUi.serve, swaggerUi.setup(swaggerSpec, {
+    // Configuração para servir o Swagger UI
+    app.use(docsPath, swaggerUi.serve);
+    app.get(docsPath, swaggerUi.setup(swaggerSpec, {
       explorer: true, 
       customCss: `
         .swagger-ui .topbar { display: none }
@@ -112,17 +113,17 @@ export default class SwaggerConfig {
       }
     }));
 
-    // Endpoint para obter a especificação em formato JSON (também protegido)
+    // Endpoint para obter a especificação em formato JSON
     app.get(`${docsPath}.json`, (req, res) => {
       res.setHeader('Content-Type', 'application/json');
       res.send(swaggerSpec);
     });
 
-    // Redirecionar da rota antiga (se alguém tentar acessar)
-    app.get('/api-docs', (req, res) => {
+    // Redirecionamento da rota antiga que estávamos tentando usar
+    app.get('/api/docs/v1', (req, res) => {
       res.redirect(docsPath);
     });
 
-    console.log(`📚 Documentação Swagger disponível em ${docsPath} (protegida por autenticação)`);
+    console.log(`📚 Documentação Swagger disponível em ${docsPath}`);
   }
 }
