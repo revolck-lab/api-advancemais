@@ -9,7 +9,7 @@ import path from 'path';
 import swaggerJSDoc from 'swagger-jsdoc';
 import swaggerUi from 'swagger-ui-express';
 import { version } from '../package.json';
-import AuthMiddleware from './swagger/middleware/auth.middleware';
+import basicAuth from 'express-basic-auth'; // Você precisará instalar: npm install express-basic-auth
 
 // Carrega variáveis de ambiente
 dotenv.config();
@@ -99,7 +99,7 @@ class App {
           defaultSrc: ["'self'"],
           scriptSrc: ["'self'", "'unsafe-inline'", 'https://fonts.googleapis.com', 'https://cdn.jsdelivr.net'],
           styleSrc: ["'self'", "'unsafe-inline'", 'https://fonts.googleapis.com', 'https://cdn.jsdelivr.net'],
-          imgSrc: ["'self'", 'data:'],
+          imgSrc: ["'self'", 'data:', 'https://cdn.jsdelivr.net'],
           fontSrc: ["'self'", 'https://fonts.gstatic.com', 'https://cdn.jsdelivr.net'],
           connectSrc: ["'self'"]
         }
@@ -142,10 +142,13 @@ class App {
   }
 
   /**
-   * Configura o Swagger para documentação da API
+   * Configura o Swagger para documentação da API com estilo Mercado Pago
    */
   private setupSwagger(): void {
     console.log('Configurando Swagger...');
+    
+    // Nova URL para a documentação
+    const docsUrl = '/api/v1/docs';
     
     // Opções básicas de configuração
     const swaggerOptions: swaggerJSDoc.Options = {
@@ -154,7 +157,7 @@ class App {
         info: {
           title: 'AdvanceMais API',
           version: version || '1.0.0',
-          description: 'Documentação da API do AdvanceMais',
+          description: 'Documentação da API do AdvanceMais, plataforma de serviços para advogados e escritórios jurídicos.',
           contact: {
             name: 'Suporte AdvanceMais',
             email: 'suporte@advancemais.com.br'
@@ -182,6 +185,13 @@ class App {
             },
           },
         },
+        tags: [
+          { name: 'Autenticação', description: 'Endpoints para autenticação e cadastro de usuários' },
+          { name: 'Usuários', description: 'Gerenciamento de usuários do sistema' },
+          { name: 'Empresas', description: 'Gerenciamento de empresas e escritórios jurídicos' },
+          { name: 'Pagamentos', description: 'Processamento de pagamentos e assinaturas' },
+          { name: 'CMS', description: 'Gerenciamento de conteúdo do site' },
+        ]
       },
       // Caminhos para arquivos com anotações JSDoc
       apis: [
@@ -197,49 +207,225 @@ class App {
       // Gera a especificação Swagger
       const swaggerSpec = swaggerJSDoc(swaggerOptions);
       
-      // Verifique se há credenciais no ambiente
-      const hasCredentials = process.env.DOCS_USERNAME && process.env.DOCS_PASSWORD;
-      if (!hasCredentials) {
-        console.warn('⚠️ Aviso: Credenciais para Swagger não configuradas. A documentação ficará sem proteção.');
-        console.warn('⚠️ Configure DOCS_USERNAME e DOCS_PASSWORD nas variáveis de ambiente.');
-      }
+      // Configuração de autenticação básica
+      const username = process.env.DOCS_USERNAME || 'admin';
+      const password = process.env.DOCS_PASSWORD || 'advancemais2025';
       
-      // Rota para documentação (com proteção por autenticação)
-      this.app.use('/api-docs', (req: Request, res: Response, next: NextFunction) => {
-        AuthMiddleware(req, res, next);
-      }, swaggerUi.serve);
+      // Usar Basic Auth do express-basic-auth para proteção da documentação
+      const basicAuthMiddleware = basicAuth({
+        users: { [username]: password },
+        challenge: true,
+        realm: 'Documentação da API AdvanceMais',
+      });
       
-      // Configuração do Swagger UI
-      this.app.get('/api-docs', swaggerUi.setup(swaggerSpec, {
+      // CSS personalizado para imitar o estilo do Mercado Pago
+      const customCss = `
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
+        
+        * {
+          font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+        }
+        
+        body {
+          margin: 0;
+          padding: 0;
+          background: #f8f9fa;
+        }
+        
+        .swagger-ui .topbar {
+          background-color: #2c3e50;
+          padding: 10px 0;
+          height: 60px;
+        }
+        
+        .swagger-ui .info {
+          margin: 30px 0;
+        }
+        
+        .swagger-ui .info .title {
+          color: #2c3e50;
+          font-weight: 700;
+          font-size: 28px;
+        }
+        
+        /* Estilo lateral como Mercado Pago */
+        .swagger-ui .wrapper {
+          display: flex;
+          padding: 0;
+          max-width: 100%;
+        }
+        
+        /* Cria uma barra lateral artificial */
+        .swagger-ui .wrapper:before {
+          content: "";
+          display: block;
+          width: 240px;
+          min-width: 240px;
+          background: #ffffff;
+          border-right: 1px solid #e0e0e0;
+          min-height: 100vh;
+          box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+        }
+        
+        /* Estiliza o conteúdo principal */
+        .swagger-ui .wrapper .opblock-tag-section {
+          width: calc(100% - 240px);
+          box-sizing: border-box;
+          padding-left: 20px;
+        }
+        
+        /* Altera estilo dos métodos HTTP */
+        .swagger-ui .opblock-get .opblock-summary-method {
+          background-color: #00BCD4;
+        }
+        
+        .swagger-ui .opblock-post .opblock-summary-method {
+          background-color: #00C853;
+        }
+        
+        .swagger-ui .opblock-put .opblock-summary-method {
+          background-color: #FB8C00;
+        }
+        
+        .swagger-ui .opblock-delete .opblock-summary-method {
+          background-color: #F44336;
+        }
+        
+        /* Blocos de operação */
+        .swagger-ui .opblock {
+          margin: 0 0 15px;
+          border-radius: 8px;
+          box-shadow: 0 1px 2px rgba(0,0,0,0.1);
+          border: none;
+        }
+        
+        .swagger-ui .opblock.opblock-get {
+          border-color: #00BCD4;
+          background: rgba(0, 188, 212, 0.05);
+        }
+        
+        .swagger-ui .opblock.opblock-post {
+          border-color: #00C853;
+          background: rgba(0, 200, 83, 0.05);
+        }
+        
+        .swagger-ui .opblock.opblock-put {
+          border-color: #FB8C00;
+          background: rgba(251, 140, 0, 0.05);
+        }
+        
+        .swagger-ui .opblock.opblock-delete {
+          border-color: #F44336;
+          background: rgba(244, 67, 54, 0.05);
+        }
+        
+        /* Estilo botões */
+        .swagger-ui .btn {
+          border-radius: 4px;
+          transition: all 0.2s;
+        }
+        
+        .swagger-ui .btn.execute {
+          background-color: #2c3e50;
+          border-color: #2c3e50;
+        }
+        
+        .swagger-ui .btn.execute:hover {
+          background-color: #1a252f;
+        }
+        
+        /* Abas laterais */
+        .swagger-ui .opblock-tag {
+          padding: 10px 0;
+          margin: 0 0 5px;
+          display: block;
+          transition: all 0.2s;
+          cursor: pointer;
+        }
+        
+        .swagger-ui .opblock-tag:hover {
+          background-color: rgba(0, 0, 0, 0.05);
+        }
+        
+        .swagger-ui section.models {
+          border: 1px solid #e0e0e0;
+          border-radius: 8px;
+        }
+        
+        /* Estilo para os parâmetros */
+        .swagger-ui .parameters-container {
+          margin-top: 20px;
+        }
+        
+        .swagger-ui .parameter__name {
+          font-weight: 600;
+          color: #2c3e50;
+        }
+        
+        /* Estilo para os códigos */
+        .swagger-ui .microlight {
+          border-radius: 4px;
+          padding: 10px;
+          background: #f0f0f0;
+        }
+        
+        /* Esquemas */
+        .swagger-ui .model-box {
+          background: rgba(0, 188, 212, 0.05);
+          border-radius: 4px;
+        }
+        
+        /* Melhorar o layout para mobile */
+        @media (max-width: 768px) {
+          .swagger-ui .wrapper:before {
+            display: none;
+          }
+          
+          .swagger-ui .wrapper .opblock-tag-section {
+            width: 100%;
+            padding-left: 0;
+          }
+        }
+      `;
+      
+      // Aplica autenticação básica na rota da documentação
+      this.app.use(docsUrl, basicAuthMiddleware, swaggerUi.serve);
+      this.app.get(docsUrl, swaggerUi.setup(swaggerSpec, {
         explorer: true,
-        customCss: `
-          .swagger-ui .topbar { display: none }
-          body { font-family: 'Nunito', -apple-system, BlinkMacSystemFont, 'SF Pro Text', sans-serif; }
-          .swagger-ui .btn.execute { background-color: #2ecc71; border-color: #2ecc71; }
-          .swagger-ui .btn.execute:hover { background-color: #27ae60; }
-        `,
+        customCss: customCss,
         customSiteTitle: 'AdvanceMais API - Documentação',
+        customfavIcon: '/favicon.ico',
         swaggerOptions: {
           persistAuthorization: true,
+          docExpansion: 'list',
           filter: true,
           displayRequestDuration: true,
+          defaultModelsExpandDepth: 1,
+          defaultModelExpandDepth: 2,
+          tagsSorter: 'alpha',
+          operationsSorter: 'alpha',
         }
       }));
       
-      // Rota para acessar a especificação em formato JSON (também protegida)
-      this.app.get('/api-docs.json', (req: Request, res: Response, next: NextFunction) => {
-        AuthMiddleware(req, res, next);
-      }, (req: Request, res: Response) => {
+      // Também protege o JSON da documentação
+      this.app.get(`${docsUrl}.json`, basicAuthMiddleware, (req: Request, res: Response) => {
         res.setHeader('Content-Type', 'application/json');
         res.send(swaggerSpec);
       });
       
-      // Adicione rotas alternativas (redirecionamento)
-      this.app.get('/api/docs/v1', (_req: Request, res: Response) => {
-        res.redirect('/api-docs');
+      // Redirecionar da rota anterior
+      this.app.get('/api-docs', (req: Request, res: Response) => {
+        res.redirect(docsUrl);
       });
       
-      console.log('✅ Documentação Swagger configurada com sucesso em /api-docs');
+      console.log(`✅ Documentação Swagger configurada com sucesso em ${docsUrl}`);
+      console.log(`✅ Credenciais para acesso: ${username}:${password}`);
+      
+      // Se estiver usando credenciais padrão, mostrar aviso
+      if (!process.env.DOCS_USERNAME || !process.env.DOCS_PASSWORD) {
+        console.warn('⚠️ AVISO: Usando credenciais padrão para a documentação!');
+        console.warn('⚠️ Configure DOCS_USERNAME e DOCS_PASSWORD nas variáveis de ambiente para aumentar a segurança.');
+      }
     } catch (error) {
       console.error('❌ Erro ao configurar Swagger:', error);
     }
@@ -304,7 +490,6 @@ class App {
           PORT: process.env.PORT,
           DATABASE_URL: process.env.DATABASE_URL ? '***CONFIGURADO***' : '***NÃO CONFIGURADO***',
           CORS_ORIGIN: process.env.CORS_ORIGIN,
-          // Não inclua variáveis sensíveis como JWT_SECRET
         };
         
         res.status(200).json({
