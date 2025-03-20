@@ -1,0 +1,81 @@
+advancemais-api/
+├── src/
+│   ├── api-gateway/                      # API Gateway
+│   │   ├── index.js                      # Ponto de entrada do gateway
+│   │   ├── routes.js                     # Configuração de rotas
+│   │   └── middleware/                   # Middleware compartilhado
+│   │       ├── auth.middleware.js        # Middleware de autenticação
+│   │       ├── error.middleware.js       # Tratamento de erros
+│   │       └── validation.middleware.js  # Validação de entrada
+│   │
+│   ├── services/                         # Microserviços da aplicação
+│   │   ├── auth-service/                 # Serviço de Autenticação
+│   │   │   ├── controllers/
+│   │   │   ├── models/
+│   │   │   ├── routes/
+│   │   │   ├── validators/
+│   │   │   └── index.js
+│   │   │
+│   │   ├── user-service/                 # Serviço de Usuários
+│   │   │   ├── controllers/
+│   │   │   ├── models/
+│   │   │   ├── routes/
+│   │   │   ├── validators/
+│   │   │   └── index.js
+│   │   │
+│   │   ├── product-service/              # Serviço de Produtos
+│   │   │   ├── controllers/
+│   │   │   ├── models/
+│   │   │   ├── routes/
+│   │   │   ├── validators/
+│   │   │   └── index.js
+│   │   │
+│   │   ├── payment-service/              # Serviço de Pagamentos
+│   │   │   ├── controllers/
+│   │   │   ├── models/
+│   │   │   ├── routes/
+│   │   │   ├── validators/
+│   │   │   ├── mercadopago/              # Integrações específicas
+│   │   │   └── index.js
+│   │   │
+│   │   └── notification-service/         # Serviço de Notificações
+│   │       ├── controllers/
+│   │       ├── models/
+│   │       ├── email-templates/
+│   │       ├── providers/
+│   │       └── index.js
+│   │
+│   ├── shared/                           # Código compartilhado entre serviços
+│   │   ├── config/                       # Configurações globais
+│   │   │   ├── database.js               # Configuração banco de dados
+│   │   │   ├── aws.js                    # Configuração AWS
+│   │   │   ├── mercadopago.js            # Configuração Mercado Pago
+│   │   │   └── mail.js                   # Configuração SMTP
+│   │   │
+│   │   ├── utils/                        # Utilitários compartilhados
+│   │   │   ├── logger.js                 # Serviço de log
+│   │   │   ├── validators.js             # Validadores comuns
+│   │   │   └── helpers.js                # Funções auxiliares
+│   │   │
+│   │   └── event-bus/                    # Sistema de eventos
+│   │       ├── index.js                  # Configuração do barramento
+│   │       ├── publishers.js             # Métodos para publicar eventos
+│   │       └── subscribers.js            # Métodos para receber eventos
+│   │
+│   ├── app.js                            # Configuração da aplicação
+│   └── server.js                         # Inicialização do servidor
+│
+├── prisma/                               # Modelos e migrações do Prisma
+│   ├── schema.prisma
+│   └── migrations/
+│
+├── tests/                                # Testes
+│   ├── unit/
+│   │   └── services/
+│   ├── integration/
+│   └── e2e/
+│
+├── .env.example                          # Exemplo de variáveis de ambiente
+├── .gitignore                            # Arquivos ignorados pelo git
+├── package.json                          # Dependências e scripts
+└── README.md                             # Documentação
