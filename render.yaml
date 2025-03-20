@@ -3,9 +3,15 @@ services:
     name: advancemais-api
     env: node
     plan: starter
-    buildCommand: npm install && npm run build && npm run prisma:generate
+    buildCommand: npm install && npm run build && npx prisma generate
     startCommand: npm start
     healthCheckPath: /api/health
+    healthCheckTimeout: 10
+    healthCheckInterval: 30
+    autoDeploy: true
+    # Adiciona estratégia de retry para problemas de inicialização
+    initialDeployHooks:
+      - command: echo "Executando hooks de deploy inicial..."
     envVars:
       - key: NODE_ENV
         value: production
@@ -25,3 +31,12 @@ services:
         value: 900000
       - key: RATE_LIMIT_MAX
         value: 100
+      # Adicionar configuração para permitir operação sem banco
+      - key: ALLOW_NO_DB_MODE
+        value: true
+      # Configurar número máximo de tentativas de reconexão
+      - key: DB_MAX_RETRIES
+        value: 5
+      # Configurar delay inicial entre tentativas (ms)
+      - key: DB_RETRY_DELAY
+        value: 3000
