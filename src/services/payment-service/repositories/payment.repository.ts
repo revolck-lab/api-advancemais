@@ -152,6 +152,22 @@ export class PaymentRepository {
 
     const skip = (page - 1) * limit;
 
+    // Definimos um tipo para o resultado do Prisma
+    type PrismaPayment = {
+      id: string;
+      user_id: number;
+      amount: number;
+      currency: string;
+      description: string;
+      status: string;
+      payment_method: string;
+      payment_type: string;
+      external_id: string | null;
+      metadata: string | null;
+      created_at: Date;
+      updated_at: Date;
+    };
+
     const [payments, total] = await Promise.all([
       this.prisma.payment.findMany({
         where,
@@ -162,14 +178,14 @@ export class PaymentRepository {
       this.prisma.payment.count({ where })
     ]);
 
-    // Parse metadata
-    const formattedPayments = payments.map(payment => ({
+    // Parse metadata com tipagem explícita
+    const formattedPayments = payments.map((payment: PrismaPayment) => ({
       ...payment,
-      metadata: payment.metadata ? JSON.parse(payment.metadata as string) : undefined
+      metadata: payment.metadata ? JSON.parse(payment.metadata) : undefined
     }));
 
     return {
-      payments: formattedPayments,
+      payments: formattedPayments as IPayment[],
       total
     };
   }

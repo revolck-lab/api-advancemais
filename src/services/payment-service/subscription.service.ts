@@ -4,10 +4,34 @@ import {
   ISubscription, 
   ISubscriptionFilters, 
   ISubscriptionResult, 
-  SubscriptionStatus 
+  SubscriptionStatus,
+  SubscriptionFrequency,
+  FrequencyType
 } from './interfaces/subscription.interface';
 import { MercadoPagoService } from './mercadopago/mercadopago.service';
 import { SubscriptionRepository } from './repositories/subscription.repository';
+
+/**
+ * Mapeia um valor de frequência numérica para o enum SubscriptionFrequency correspondente
+ * @param frequency Valor numérico da frequência
+ * @returns Valor do enum SubscriptionFrequency
+ */
+function mapFrequencyToEnum(frequency: number): SubscriptionFrequency {
+  switch(frequency) {
+    case 1:
+      return SubscriptionFrequency.MONTHLY;
+    case 2:
+      return SubscriptionFrequency.BIMONTHLY;
+    case 3:
+      return SubscriptionFrequency.QUARTERLY;
+    case 6:
+      return SubscriptionFrequency.BIANNUAL;
+    case 12:
+      return SubscriptionFrequency.ANNUAL;
+    default:
+      return SubscriptionFrequency.MONTHLY; // Valor padrão se não corresponder
+  }
+}
 
 /**
  * Serviço de assinaturas - centraliza a lógica de negócios relacionada a assinaturas
@@ -47,7 +71,7 @@ export class SubscriptionService {
         end_date: mercadoPagoResult.end_date ? new Date(mercadoPagoResult.end_date) : undefined,
         next_payment_date: mercadoPagoResult.next_payment_date ? new Date(mercadoPagoResult.next_payment_date) : undefined,
         payment_method_id: mercadoPagoResult.payment_method_id,
-        frequency: data.frequency.toString(),
+        frequency: mapFrequencyToEnum(data.frequency), // Convertendo número para enum
         frequency_type: data.frequency_type,
         auto_recurring: mercadoPagoResult.auto_recurring,
         external_id: mercadoPagoResult.external_id,

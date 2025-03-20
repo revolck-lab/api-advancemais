@@ -1,8 +1,7 @@
 import { MercadoPagoConfig } from 'mercadopago';
 import { 
   ICreatePaymentDTO, 
-  IPaymentResult, 
-  PaymentStatus
+  IPaymentResult
 } from '../interfaces/payment.interface';
 import {
   ICreateSubscriptionDTO,
@@ -15,6 +14,7 @@ import { StatusMapper } from './status.mapper';
 /**
  * Classe principal para integração com o Mercado Pago
  * Delega operações específicas para handlers especializados
+ * Adaptada para a versão 2.3.0 do SDK do Mercado Pago
  */
 export class MercadoPagoService {
   private client: MercadoPagoConfig;
@@ -33,10 +33,9 @@ export class MercadoPagoService {
       throw new Error('MERCADOPAGO_ACCESS_TOKEN não configurado nas variáveis de ambiente');
     }
     
-    // Configurar o cliente do Mercado Pago
-    this.client = new MercadoPagoConfig({ 
-      accessToken,
-      options: { timeout: 5000, idempotencyKey: 'advancemais-' + Date.now() }
+    // Configurar o cliente do Mercado Pago com a versão 2.3.0
+    this.client = new MercadoPagoConfig({
+      accessToken: accessToken
     });
     
     this.statusMapper = new StatusMapper();

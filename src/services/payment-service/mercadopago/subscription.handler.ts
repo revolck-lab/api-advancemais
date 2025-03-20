@@ -1,4 +1,4 @@
-import { MercadoPagoConfig, PreApproval, PreApprovalPlan } from 'mercadopago';
+import { MercadoPagoConfig } from 'mercadopago';
 import { 
   ICreateSubscriptionDTO, 
   ISubscriptionResult 
@@ -7,11 +7,9 @@ import { StatusMapper } from './status.mapper';
 
 /**
  * Handler especializado em operações de assinatura com o Mercado Pago
+ * Versão 2.3.0 do SDK do Mercado Pago
  */
 export class SubscriptionHandler {
-  private preApproval: PreApproval;
-  private preApprovalPlan: PreApprovalPlan;
-
   /**
    * Inicializa o handler com a configuração do Mercado Pago
    * @param client Instância configurada do cliente MercadoPago
@@ -20,9 +18,11 @@ export class SubscriptionHandler {
   constructor(
     private client: MercadoPagoConfig,
     private statusMapper: StatusMapper
-  ) {
-    this.preApproval = new PreApproval(this.client);
-    this.preApprovalPlan = new PreApprovalPlan(this.client);
+  ) {}
+  
+  // URL base da API do Mercado Pago
+  private get apiBaseUrl(): string {
+    return 'https://api.mercadopago.com';
   }
 
   /**
@@ -32,8 +32,23 @@ export class SubscriptionHandler {
    */
   public async checkPlanExists(planId: string): Promise<boolean> {
     try {
-      const response = await this.preApprovalPlan.get({ id: planId });
-      return !!response.id;
+      const response = await fetch(`${this.apiBaseUrl}/preapproval_plan/${planId}`, {
+        method: 'GET',
+        headers: {
+          'Authorization': `Bearer ${this.client.accessToken}`
+        }
+      });
+
+      if (!response.ok) {
+        if (response.status === 404) {
+          return false;
+        }
+        const errorData = await response.json();
+        throw new Error(`Erro ao verificar plano: ${JSON.stringify(errorData)}`);
+      }
+
+      const data = await response.json() as Record<string, any>;
+      return typeof data === 'object' && data !== null && 'id' in data && !!data.id;
     } catch (error) {
       console.error(`❌ Erro ao verificar plano ${planId}:`, error);
       return false;
@@ -57,14 +72,28 @@ export class SubscriptionHandler {
       const subscriptionData = this.prepareSubscriptionData(data);
 
       // Criar a assinatura no Mercado Pago
-      const response = await this.preApproval.create({ body: subscriptionData });
+      const response = await fetch(`${this.apiBaseUrl}/preapproval`, {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${this.client.accessToken}`,
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify(subscriptionData)
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(`Erro ao criar assinatura: ${JSON.stringify(errorData)}`);
+      }
+
+      const responseData = await response.json() as Record<string, any>;
       
-      if (!response || !response.id) {
-        throw new Error('Resposta inválida do Mercado Pago');
+      if (!responseData || typeof responseData !== 'object' || !('id' in responseData)) {
+        throw new Error('Resposta inválida do Mercado Pago: ID não encontrado na resposta');
       }
 
       // Formatar o resultado
-      return this.formatSubscriptionResponse(response, data.payment_method_id);
+      return this.formatSubscriptionResponse(responseData, data.payment_method_id);
     } catch (error) {
       console.error('❌ Erro ao criar assinatura no Mercado Pago:', error);
       throw error;
@@ -78,14 +107,26 @@ export class SubscriptionHandler {
    */
   public async getSubscription(id: string): Promise<ISubscriptionResult> {
     try {
-      const response = await this.preApproval.get({ id });
+      const response = await fetch(`${this.apiBaseUrl}/preapproval/${id}`, {
+        method: 'GET',
+        headers: {
+          'Authorization': `Bearer ${this.client.accessToken}`
+        }
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(`Erro ao consultar assinatura: ${JSON.stringify(errorData)}`);
+      }
+
+      const responseData = await response.json();
       
-      if (!response || !response.id) {
-        throw new Error(`Assinatura com ID ${id} não encontrada`);
+      if (!responseData || typeof responseData !== 'object' || !('id' in responseData)) {
+        throw new Error(`Assinatura com ID ${id} não encontrada ou formato de resposta inválido`);
       }
 
       // Formatar o resultado
-      return this.formatSubscriptionResponse(response);
+      return this.formatSubscriptionResponse(responseData);
     } catch (error) {
       console.error(`❌ Erro ao consultar assinatura ${id} no Mercado Pago:`, error);
       throw error;
@@ -99,17 +140,28 @@ export class SubscriptionHandler {
    */
   public async cancelSubscription(id: string): Promise<ISubscriptionResult> {
     try {
-      const response = await this.preApproval.update({
-        id,
-        body: { status: "cancelled" }
+      const response = await fetch(`${this.apiBaseUrl}/preapproval/${id}`, {
+        method: 'PUT',
+        headers: {
+          'Authorization': `Bearer ${this.client.accessToken}`,
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({ status: "cancelled" })
       });
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(`Erro ao cancelar assinatura: ${JSON.stringify(errorData)}`);
+      }
+
+      const responseData = await response.json();
       
-      if (!response || !response.id) {
-        throw new Error(`Erro ao cancelar assinatura ${id}`);
+      if (!responseData || typeof responseData !== 'object' || !('id' in responseData)) {
+        throw new Error(`Erro ao cancelar assinatura ${id}: formato de resposta inválido`);
       }
 
       // Formatar o resultado
-      return this.formatSubscriptionResponse(response);
+      return this.formatSubscriptionResponse(responseData);
     } catch (error) {
       console.error(`❌ Erro ao cancelar assinatura ${id} no Mercado Pago:`, error);
       throw error;
@@ -123,17 +175,28 @@ export class SubscriptionHandler {
    */
   public async pauseSubscription(id: string): Promise<ISubscriptionResult> {
     try {
-      const response = await this.preApproval.update({
-        id,
-        body: { status: "paused" }
+      const response = await fetch(`${this.apiBaseUrl}/preapproval/${id}`, {
+        method: 'PUT',
+        headers: {
+          'Authorization': `Bearer ${this.client.accessToken}`,
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({ status: "paused" })
       });
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(`Erro ao pausar assinatura: ${JSON.stringify(errorData)}`);
+      }
+
+      const responseData = await response.json();
       
-      if (!response || !response.id) {
-        throw new Error(`Erro ao pausar assinatura ${id}`);
+      if (!responseData || typeof responseData !== 'object' || !('id' in responseData)) {
+        throw new Error(`Erro ao pausar assinatura ${id}: formato de resposta inválido`);
       }
 
       // Formatar o resultado
-      return this.formatSubscriptionResponse(response);
+      return this.formatSubscriptionResponse(responseData);
     } catch (error) {
       console.error(`❌ Erro ao pausar assinatura ${id} no Mercado Pago:`, error);
       throw error;
@@ -147,17 +210,28 @@ export class SubscriptionHandler {
    */
   public async reactivateSubscription(id: string): Promise<ISubscriptionResult> {
     try {
-      const response = await this.preApproval.update({
-        id,
-        body: { status: "authorized" }
+      const response = await fetch(`${this.apiBaseUrl}/preapproval/${id}`, {
+        method: 'PUT',
+        headers: {
+          'Authorization': `Bearer ${this.client.accessToken}`,
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({ status: "authorized" })
       });
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(`Erro ao reativar assinatura: ${JSON.stringify(errorData)}`);
+      }
+
+      const responseData = await response.json();
       
-      if (!response || !response.id) {
-        throw new Error(`Erro ao reativar assinatura ${id}`);
+      if (!responseData || typeof responseData !== 'object' || !('id' in responseData)) {
+        throw new Error(`Erro ao reativar assinatura ${id}: formato de resposta inválido`);
       }
 
       // Formatar o resultado
-      return this.formatSubscriptionResponse(response);
+      return this.formatSubscriptionResponse(responseData);
     } catch (error) {
       console.error(`❌ Erro ao reativar assinatura ${id} no Mercado Pago:`, error);
       throw error;
@@ -199,22 +273,25 @@ export class SubscriptionHandler {
    * @returns Objeto formatado no formato interno
    */
   private formatSubscriptionResponse(
-    responseBody: any, 
+    responseBody: Record<string, any>, 
     paymentMethodId?: string
   ): ISubscriptionResult {
+    // Garantir que o responseBody tem as propriedades necessárias
+    const id = responseBody.id?.toString() || '';
+
     return {
-      id: String(responseBody.id),
-      external_id: String(responseBody.id),
-      status: this.statusMapper.mapSubscriptionStatus(responseBody.status),
-      plan_id: responseBody.preapproval_plan_id,
-      payer_id: responseBody.payer_id,
-      card_id: responseBody.card_id,
-      next_payment_date: responseBody.next_payment_date,
-      start_date: responseBody.date_created,
-      end_date: responseBody.end_date,
+      id: id,
+      external_id: id,
+      status: this.statusMapper.mapSubscriptionStatus(responseBody.status || ''),
+      plan_id: responseBody.preapproval_plan_id || '',
+      payer_id: responseBody.payer_id || '',
+      card_id: responseBody.card_id || '',
+      next_payment_date: responseBody.next_payment_date || null,
+      start_date: responseBody.date_created || new Date().toISOString(),
+      end_date: responseBody.end_date || null,
       payment_method_id: responseBody.payment_method_id || paymentMethodId || 'credit_card',
       auto_recurring: responseBody.auto_recurring?.frequency_type ? true : false,
-      metadata: responseBody.metadata
+      metadata: responseBody.metadata || {}
     };
   }
 }

@@ -17,6 +17,5 @@ router.get('/version', (req, res) => {
 
 // Configurar as rotas de pagamento
 router.use('/payments', paymentRoutes);
-// Adicionar outras rotas aqui quando forem criadas
 
 export default router;

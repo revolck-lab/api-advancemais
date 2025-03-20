@@ -1,4 +1,4 @@
-import { MercadoPagoConfig, Payment } from 'mercadopago';
+import { MercadoPagoConfig } from 'mercadopago';
 import { 
   ICreatePaymentDTO, 
   IPaymentResult, 
@@ -8,10 +8,9 @@ import { StatusMapper } from './status.mapper';
 
 /**
  * Handler especializado em operações de pagamento com o Mercado Pago
+ * Adaptado para a versão 2.3.0 do SDK do Mercado Pago
  */
 export class PaymentHandler {
-  private payment: Payment;
-
   /**
    * Inicializa o handler com a configuração do Mercado Pago
    * @param client Instância configurada do cliente MercadoPago
@@ -20,8 +19,11 @@ export class PaymentHandler {
   constructor(
     private client: MercadoPagoConfig,
     private statusMapper: StatusMapper
-  ) {
-    this.payment = new Payment(this.client);
+  ) {}
+  
+  // URL base da API do Mercado Pago
+  private get apiBaseUrl(): string {
+    return 'https://api.mercadopago.com';
   }
 
   /**
@@ -34,15 +36,29 @@ export class PaymentHandler {
       // Prepare data for Mercado Pago API
       const paymentData = this.preparePaymentData(data);
 
-      // Criar o pagamento no Mercado Pago
-      const response = await this.payment.create({ body: paymentData });
+      // Criar o pagamento no Mercado Pago usando a nova API
+      const response = await fetch(`${this.apiBaseUrl}/v1/payments`, {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${this.client.accessToken}`,
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify(paymentData)
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(`Erro ao criar pagamento: ${JSON.stringify(errorData)}`);
+      }
+
+      const responseData = await response.json() as Record<string, any>;
       
-      if (!response || !response.id) {
-        throw new Error('Resposta inválida do Mercado Pago');
+      if (!responseData || typeof responseData !== 'object' || !('id' in responseData)) {
+        throw new Error('Resposta inválida do Mercado Pago: ID não encontrado');
       }
 
       // Formatar o resultado
-      return this.formatPaymentResponse(response);
+      return this.formatPaymentResponse(responseData as Record<string, any>);
     } catch (error) {
       console.error('❌ Erro ao criar pagamento no Mercado Pago:', error);
       throw error;
@@ -56,14 +72,26 @@ export class PaymentHandler {
    */
   public async getPayment(id: string): Promise<IPaymentResult> {
     try {
-      const response = await this.payment.get({ id: Number(id) });
+      const response = await fetch(`${this.apiBaseUrl}/v1/payments/${id}`, {
+        method: 'GET',
+        headers: {
+          'Authorization': `Bearer ${this.client.accessToken}`
+        }
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(`Erro ao consultar pagamento: ${JSON.stringify(errorData)}`);
+      }
+
+      const responseData = await response.json();
       
-      if (!response || !response.id) {
-        throw new Error(`Pagamento com ID ${id} não encontrado`);
+      if (!responseData || typeof responseData !== 'object' || !('id' in responseData)) {
+        throw new Error(`Pagamento com ID ${id} não encontrado ou formato de resposta inválido`);
       }
 
       // Formatar o resultado
-      return this.formatPaymentResponse(response);
+      return this.formatPaymentResponse(responseData);
     } catch (error) {
       console.error(`❌ Erro ao consultar pagamento ${id} no Mercado Pago:`, error);
       throw error;
@@ -77,14 +105,28 @@ export class PaymentHandler {
    */
   public async cancelPayment(id: string): Promise<IPaymentResult> {
     try {
-      const response = await this.payment.cancel({ id: Number(id) });
+      const response = await fetch(`${this.apiBaseUrl}/v1/payments/${id}`, {
+        method: 'PUT',
+        headers: {
+          'Authorization': `Bearer ${this.client.accessToken}`,
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({ status: 'cancelled' })
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(`Erro ao cancelar pagamento: ${JSON.stringify(errorData)}`);
+      }
+
+      const responseData = await response.json();
       
-      if (!response || !response.id) {
-        throw new Error(`Erro ao cancelar pagamento ${id}`);
+      if (!responseData || typeof responseData !== 'object' || !('id' in responseData)) {
+        throw new Error(`Erro ao cancelar pagamento ${id}: formato de resposta inválido`);
       }
 
       // Formatar o resultado
-      return this.formatPaymentResponse(response);
+      return this.formatPaymentResponse(responseData);
     } catch (error) {
       console.error(`❌ Erro ao cancelar pagamento ${id} no Mercado Pago:`, error);
       throw error;
@@ -98,14 +140,36 @@ export class PaymentHandler {
    */
   public async refundPayment(id: string): Promise<IPaymentResult> {
     try {
-      // Criar o reembolso
-      await this.payment.refund({ id: Number(id) });
-      
+      // Criar o reembolso utilizando a API REST direta
+      const refundResponse = await fetch(`${this.apiBaseUrl}/v1/payments/${id}/refunds`, {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${this.client.accessToken}`,
+          'Content-Type': 'application/json'
+        }
+      });
+
+      if (!refundResponse.ok) {
+        const errorData = await refundResponse.json();
+        throw new Error(`Erro ao reembolsar pagamento: ${JSON.stringify(errorData)}`);
+      }
+
       // Consultar o pagamento para obter os dados atualizados
-      const paymentResponse = await this.payment.get({ id: Number(id) });
+      const paymentResponse = await fetch(`${this.apiBaseUrl}/v1/payments/${id}`, {
+        method: 'GET',
+        headers: {
+          'Authorization': `Bearer ${this.client.accessToken}`
+        }
+      });
+
+      if (!paymentResponse.ok) {
+        throw new Error(`Erro ao obter detalhes do pagamento após reembolso`);
+      }
+
+      const paymentData = await paymentResponse.json() as Record<string, any>;
 
       // Formatar o resultado
-      return this.formatPaymentResponse(paymentResponse);
+      return this.formatPaymentResponse(paymentData);
     } catch (error) {
       console.error(`❌ Erro ao reembolsar pagamento ${id} no Mercado Pago:`, error);
       throw error;
@@ -166,24 +230,27 @@ export class PaymentHandler {
    * @param responseBody Resposta da API do Mercado Pago
    * @returns Objeto formatado no formato interno
    */
-  private formatPaymentResponse(responseBody: any): IPaymentResult {
+  private formatPaymentResponse(responseBody: Record<string, any>): IPaymentResult {
+    // Garantir que o responseBody tem as propriedades necessárias
+    const id = responseBody.id?.toString() || '';
+    
     return {
-      id: String(responseBody.id),
-      external_id: String(responseBody.id),
-      status: this.statusMapper.mapPaymentStatus(responseBody.status),
-      status_detail: responseBody.status_detail,
-      payment_method_id: responseBody.payment_method_id,
-      payment_type_id: responseBody.payment_type_id,
-      transaction_amount: responseBody.transaction_amount,
-      installments: responseBody.installments,
-      processing_mode: responseBody.processing_mode,
-      description: responseBody.description,
-      payer: responseBody.payer,
-      metadata: responseBody.metadata,
-      transaction_details: responseBody.transaction_details,
-      fee_details: responseBody.fee_details,
-      charges_details: responseBody.charges_details,
-      point_of_interaction: responseBody.point_of_interaction
+      id: id,
+      external_id: id,
+      status: this.statusMapper.mapPaymentStatus(responseBody.status || ''),
+      status_detail: responseBody.status_detail || '',
+      payment_method_id: responseBody.payment_method_id || '',
+      payment_type_id: responseBody.payment_type_id || '',
+      transaction_amount: responseBody.transaction_amount || 0,
+      installments: responseBody.installments || 1,
+      processing_mode: responseBody.processing_mode || '',
+      description: responseBody.description || '',
+      payer: responseBody.payer || {},
+      metadata: responseBody.metadata || {},
+      transaction_details: responseBody.transaction_details || {},
+      fee_details: responseBody.fee_details || [],
+      charges_details: responseBody.charges_details || [],
+      point_of_interaction: responseBody.point_of_interaction || {}
     };
   }
 }

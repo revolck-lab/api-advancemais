@@ -6,6 +6,7 @@ dotenv.config();
 
 /**
  * Cria e retorna uma instância configurada do cliente Mercado Pago
+ * Adaptado para a versão 2.3.0 do SDK
  * @returns Instância configurada do MercadoPagoConfig
  */
 export const createMercadoPagoClient = (): MercadoPagoConfig => {
@@ -16,10 +17,9 @@ export const createMercadoPagoClient = (): MercadoPagoConfig => {
       throw new Error('MERCADOPAGO_ACCESS_TOKEN não configurado nas variáveis de ambiente');
     }
     
-    // Configura o cliente com o access token
-    const client = new MercadoPagoConfig({ 
-      accessToken,
-      options: { timeout: 5000 }
+    // Configurar o cliente com o access token - adaptado para SDK 2.3.0
+    const client = new MercadoPagoConfig({
+      accessToken: accessToken
     });
     
     console.log('✅ Mercado Pago SDK configurado com sucesso');
