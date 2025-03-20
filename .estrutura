@@ -1,6 +1,6 @@
 advancemais-api/
 ├── src/
-│   ├── api-gateway/                      # API Gateway
+│   ├── gateway/                      # API Gateway
 │   │   ├── controllers/                  # Controladores do gateway
 │   │   ├── middleware/                   # Middleware compartilhado
 │   │   │   ├── auth.middleware.ts        # Middleware de autenticação

@@ -9,7 +9,8 @@ import path from 'path';
 import swaggerJSDoc from 'swagger-jsdoc';
 import swaggerUi from 'swagger-ui-express';
 import { version } from '../package.json';
-import basicAuth from 'express-basic-auth'; // Você precisará instalar: npm install express-basic-auth
+import basicAuth from 'express-basic-auth';
+import apiRoutes from './gateway/routes';
 
 // Carrega variáveis de ambiente
 dotenv.config();
@@ -417,6 +418,9 @@ class App {
       this.app.get('/api-docs', (req: Request, res: Response) => {
         res.redirect(docsUrl);
       });
+
+      // Adicionar as rotas da API
+      this.app.use(apiRoutes);
       
       console.log(`✅ Documentação Swagger configurada com sucesso em ${docsUrl}`);
       console.log(`✅ Credenciais para acesso: ${username}:${password}`);

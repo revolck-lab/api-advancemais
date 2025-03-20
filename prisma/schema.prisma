@@ -126,3 +126,82 @@ model Company {
   @@index([role_id])
   @@map("company")
 }
+
+
+===
+
+
+// Payment model (pagamentos)
+model Payment {
+  id             String    @id @default(uuid())
+  user_id        Int
+  amount         Float     @db.Decimal(10, 2)
+  currency       String    @db.VarChar(3)
+  description    String    @db.VarChar(255)
+  status         String    @db.VarChar(20)
+  payment_method String    @db.VarChar(50)
+  payment_type   String    @db.VarChar(20)
+  external_id    String?   @unique @db.VarChar(100)
+  metadata       String?   @db.Text // JSON serializado
+  created_at     DateTime  @default(now()) @db.Timestamp()
+  updated_at     DateTime  @updatedAt @db.Timestamp()
+  
+  // Relacionamentos
+  user           User      @relation(fields: [user_id], references: [id])
+  
+  @@index([user_id])
+  @@index([status])
+  @@index([payment_type])
+  @@index([created_at])
+  @@map("payment")
+}
+
+// Subscription model (assinaturas)
+model Subscription {
+  id                String    @id @default(uuid())
+  user_id           Int
+  plan_id           String    @db.VarChar(100)
+  status            String    @db.VarChar(20)
+  start_date        DateTime  @db.Timestamp()
+  end_date          DateTime? @db.Timestamp()
+  next_payment_date DateTime? @db.Timestamp()
+  payment_method_id String    @db.VarChar(50)
+  frequency         String    @db.VarChar(20)
+  frequency_type    String    @db.VarChar(10)
+  auto_recurring    Boolean   @default(true)
+  external_id       String?   @unique @db.VarChar(100)
+  metadata          String?   @db.Text // JSON serializado
+  created_at        DateTime  @default(now()) @db.Timestamp()
+  updated_at        DateTime  @updatedAt @db.Timestamp()
+  
+  // Relacionamentos
+  user              User      @relation(fields: [user_id], references: [id])
+  
+  @@index([user_id])
+  @@index([status])
+  @@index([plan_id])
+  @@index([created_at])
+  @@map("subscription")
+}
+
+// SubscriptionPlan model (planos de assinatura)
+model SubscriptionPlan {
+  id                String    @id @default(uuid())
+  external_id       String?   @unique @db.VarChar(100)
+  name              String    @db.VarChar(100)
+  description       String    @db.VarChar(255)
+  amount            Float     @db.Decimal(10, 2)
+  currency_id       String    @db.VarChar(3)
+  payment_type_id   String    @db.VarChar(20)
+  frequency         Int       @default(1)
+  frequency_type    String    @db.VarChar(10)
+  status            String    @db.VarChar(20)
+  auto_recurring    Boolean   @default(true)
+  features          String?   @db.Text // JSON serializado
+  created_at        DateTime  @default(now()) @db.Timestamp()
+  updated_at        DateTime  @updatedAt @db.Timestamp()
+  
+  @@index([status])
+  @@index([name])
+  @@map("subscription_plan")
+}
