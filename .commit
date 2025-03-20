@@ -1,0 +1,7 @@
+feat: Adicionar uma nova funcionalidade.
+fix: Corrigir um bug.
+perf: Mudanças relacionadas à performance.
+refactor: Refatoração de código.
+docs: Alterações em documentação.
+test: Adição ou modificação de testes.
+chore: Alterações menores, como atualizações de ferramentas de build ou dependências.

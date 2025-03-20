@@ -1,0 +1,55 @@
+revolck/
+├── src/                    # Código fonte principal
+│   ├── config/             # Configurações gerais
+│   │   ├── db.js           # Configurações de conexão com o banco de dados
+│   │   ├── server.js       # Configurações do servidor
+│   │   └── env/            # Variáveis de ambiente para diferentes ambientes (dev, prod)
+│   ├── modules/            # Módulos organizados por domínio
+│   │   ├── users/          # Módulo de usuários
+│   │   │   ├── controllers/
+│   │   │   │   └── userController.js  # Lógica de controle para usuários
+│   │   │   ├── models/
+│   │   │   │   └── userModel.js       # Definição do modelo de usuário
+│   │   │   ├── services/
+│   │   │   │   └── userService.js     # Lógica de negócios do usuário
+│   │   │   ├── validators/
+│   │   │   │   └── userValidator.js   # Validações de dados do usuário
+│   │   │   ├── routes/
+│   │   │   │   └── userRoutes.js      # Rotas para usuários
+│   │   └── roles/          # Módulo de funções (roles)
+│   │   │   ├── controllers/
+│   │   │   │   └── roleController.js  # Lógica de controle para funções
+│   │   │   ├── models/
+│   │   │   │   └── roleModel.js       # Definição do modelo de função
+│   │   │   ├── routes/
+│   │   │   │   └── roleRoutes.js      # Rotas para funções
+│   │   └── projects/       # Módulo de projetos
+│   │       ├── controllers/
+│   │       │   └── projectController.js
+│   │       ├── models/
+│   │       │   └── projectModel.js
+│   │       └── routes/
+│   │           └── projectRoutes.js
+│   ├── database/           # Arquivos de migração e seeds para o banco de dados
+│   │   ├── migrations/     # Scripts de migração
+│   │   ├── seeders/        # Dados iniciais (ex: funções, tipos de consulta)
+│   │   ├── models/         # Modelos Sequelize (ou ORM escolhido)
+│   │   └── schema.sql      # Esquema inicial do banco de dados
+│   ├── middlewares/        # Middlewares da aplicação
+│   │   └── authMiddleware.js  # Exemplo de middleware de autenticação
+│   ├── services/           # Serviços gerais do sistema
+│   └── app.js              # Arquivo principal para iniciar a aplicação
+├── tests/                  # Testes unitários e de integração
+│   ├── unit/               # Testes unitários para cada módulo
+│   └── integration/        # Testes de integração entre diferentes partes
+├── scripts/                # Scripts úteis para automação e deploy
+│   └── deploy.sh           # Script para deploy automatizado
+├── docs/                   # Documentação do projeto
+│   └── database.md         # Documentação do banco de dados e sua estrutura
+├── .github/                # Arquivos de integração contínua (CI)
+│   └── workflows/
+│       └── release.yml     # Automação de versionamento e deploy no GitHub Actions
+├── .env                    # Arquivo de variáveis de ambiente (não subir ao Git)
+├── .gitignore              # Arquivos e pastas a serem ignorados no controle de versão
+├── package.json            # Dependências e scripts do Node.js
+└── README.md               # Documentação inicial do projeto
