@@ -1,46 +1,122 @@
-# Diretórios e arquivos do Node.js
+# Dependências
 node_modules/
 npm-debug.log*
 yarn-debug.log*
 yarn-error.log*
 package-lock.json
+yarn.lock
 .pnpm-debug.log*
 
-# Diretórios e arquivos de ambiente
+# Variáveis de ambiente
 .env
+.env.*
+!.env.example
+src/config/env/.env.*
+!src/config/env/.env.example
+
+# Logs
+logs/
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+lerna-debug.log*
+.pnpm-debug.log*
+
+# Cobertura de testes
+coverage/
+.nyc_output/
+*.lcov
+
+# Arquivos de build
+dist/
+build/
+out/
+
+# Cache
+.cache/
+.webpack/
+.next/
+.nuxt/
+.vuepress/dist
+.serverless/
+.fusebox/
+.dynamodb/
+.tern-port
+.docz/
+.eslintcache
+
+# Arquivos temporários
+tmp/
+temp/
+.temp/
+.tmp/
+
+# Arquivos do IDE/Editor
+.idea/
+.vscode/
+*.code-workspace
+.project
+.classpath
+.c9/
+*.launch
+.settings/
+*.sublime-workspace
+*.sublime-project
+.DS_Store
+Thumbs.db
+.directory
+*~
+*.swp
+*.bak
+*.tmp
+*.orig
+
+# Arquivos específicos do sistema operacional
+.DS_Store
+Thumbs.db
+.directory
+Desktop.ini
+$RECYCLE.BIN/
+ehthumbs.db
+ehthumbs_vista.db
+*.stackdump
+
+# Arquivos de deploy
+.vercel
+.netlify
+netlify.toml
+now.json
+.firebaserc
+firebase.json
+
+# Arquivos específicos da aplicação
+config.json
+credentials.json
+.sentryclirc
 .env.local
 .env.development.local
 .env.test.local
 .env.production.local
 
-# Logs
-logs
-*.log
-logs/*.log
-pids
-*.pid
-*.seed
-*.pid.lock
+# Arquivos de banco de dados
+*.sqlite
+*.sqlite3
+*.db
 
-# Diretórios de test coverage
-coverage/
-*.lcov
+# Arquivos de upload
+uploads/
 
-# Sistema operacional
-.DS_Store
-Thumbs.db
+# Arquivos de credenciais
+*.pem
+*.key
+*.p8
+*.p12
+*.pfx
+*.cer
+*.crt
 
-# Editor de código
-.vscode/
-.idea/
-*.suo
-*.ntvs*
-*.njsproj
-*.sln
-
-# Configurações de depuração
-.vscode/launch.json
-
-# Diretório de build
-dist/
-build/
+# Arquivos específicos AWS
+aws-exports.js
+awsconfiguration.json
+amplifyconfiguration.json

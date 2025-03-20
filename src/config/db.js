@@ -1,22 +1,24 @@
 const knex = require("knex");
 const dotenv = require("dotenv");
-// Configura o dotenv
-dotenv.config({ path: "./src/config/env/.env.development" });
+
+// Configura o dotenv com base no ambiente
+const env = process.env.NODE_ENV || "development";
+dotenv.config({ path: `./src/config/env/.env.${env}` });
 
 // Função para criar uma instância do knex
 const knexInstance = async () => {
-    return databaseInstance = knex({
-      client: "mysql2",
-      connection: {
-        host: process.env.DB_HOST,
-        user: process.env.DB_USER,
-        password: process.env.DB_PASSWORD,
-        database: process.env.DB_DATABASE,
-        port: process.env.DB_PORT,
-        ssl: false,
-      },
-      pool: { min: 2, max: 10 },
-    });
+  return (databaseInstance = knex({
+    client: "mysql2",
+    connection: {
+      host: process.env.DB_HOST,
+      user: process.env.DB_USER,
+      password: process.env.DB_PASSWORD,
+      database: process.env.DB_DATABASE,
+      port: process.env.DB_PORT,
+      ssl: false,
+    },
+    pool: { min: 2, max: 10 },
+  }));
 };
 
 // Função para testar a conexão com o banco de dados
