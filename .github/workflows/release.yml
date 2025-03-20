@@ -1,21 +1,49 @@
-name: Release
+name: Semantic Release
 
 on:
   push:
     branches:
       - master
 
+permissions:
+  contents: write
+  issues: write
+  pull-requests: write
+
 jobs:
   release:
+    name: Semantic Release
     runs-on: ubuntu-latest
     steps:
-      - name: Checkout code
-        uses: actions/checkout@v2
+      - name: Checkout
+        uses: actions/checkout@v3
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v3
+        with:
+          node-version: 18
+          cache: "npm"
 
       - name: Install dependencies
-        run: npm install
+        run: npm ci
 
-      - name: Run release
+      - name: Verify npm configs
+        run: npm config list
+
+      - name: Run tests
+        run: npm test
+        env:
+          CI: true
+
+      - name: Semantic Release
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        run: npm run release
+          NPM_TOKEN: ${{ secrets.NPM_TOKEN || 'fake-token' }}
+        run: npx semantic-release
+
+      - name: Output release URL
+        if: ${{ success() }}
+        run: echo "Released at https://github.com/${{ github.repository }}/releases"
