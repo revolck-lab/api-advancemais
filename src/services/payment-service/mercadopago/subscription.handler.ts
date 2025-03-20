@@ -1,4 +1,4 @@
-import mercadopago from 'mercadopago';
+import { MercadoPagoConfig, PreApproval, PreApprovalPlan } from 'mercadopago';
 import { 
   ICreateSubscriptionDTO, 
   ISubscriptionResult 
@@ -9,10 +9,21 @@ import { StatusMapper } from './status.mapper';
  * Handler especializado em operações de assinatura com o Mercado Pago
  */
 export class SubscriptionHandler {
+  private preApproval: PreApproval;
+  private preApprovalPlan: PreApprovalPlan;
+
+  /**
+   * Inicializa o handler com a configuração do Mercado Pago
+   * @param client Instância configurada do cliente MercadoPago
+   * @param statusMapper Mapeador de status do Mercado Pago para formatos internos
+   */
   constructor(
-    private mp: typeof mercadopago,
+    private client: MercadoPagoConfig,
     private statusMapper: StatusMapper
-  ) {}
+  ) {
+    this.preApproval = new PreApproval(this.client);
+    this.preApprovalPlan = new PreApprovalPlan(this.client);
+  }
 
   /**
    * Verifica se um plano de assinatura existe no Mercado Pago
@@ -21,8 +32,8 @@ export class SubscriptionHandler {
    */
   public async checkPlanExists(planId: string): Promise<boolean> {
     try {
-      const response = await this.mp.preapproval_plan.get(planId);
-      return !!response.body;
+      const response = await this.preApprovalPlan.get({ id: planId });
+      return !!response.id;
     } catch (error) {
       console.error(`❌ Erro ao verificar plano ${planId}:`, error);
       return false;
@@ -46,14 +57,14 @@ export class SubscriptionHandler {
       const subscriptionData = this.prepareSubscriptionData(data);
 
       // Criar a assinatura no Mercado Pago
-      const response = await this.mp.preapproval.create(subscriptionData);
+      const response = await this.preApproval.create({ body: subscriptionData });
       
-      if (!response || !response.body) {
+      if (!response || !response.id) {
         throw new Error('Resposta inválida do Mercado Pago');
       }
 
       // Formatar o resultado
-      return this.formatSubscriptionResponse(response.body, data.payment_method_id);
+      return this.formatSubscriptionResponse(response, data.payment_method_id);
     } catch (error) {
       console.error('❌ Erro ao criar assinatura no Mercado Pago:', error);
       throw error;
@@ -67,14 +78,14 @@ export class SubscriptionHandler {
    */
   public async getSubscription(id: string): Promise<ISubscriptionResult> {
     try {
-      const response = await this.mp.preapproval.get(id);
+      const response = await this.preApproval.get({ id });
       
-      if (!response || !response.body) {
+      if (!response || !response.id) {
         throw new Error(`Assinatura com ID ${id} não encontrada`);
       }
 
       // Formatar o resultado
-      return this.formatSubscriptionResponse(response.body);
+      return this.formatSubscriptionResponse(response);
     } catch (error) {
       console.error(`❌ Erro ao consultar assinatura ${id} no Mercado Pago:`, error);
       throw error;
@@ -88,17 +99,17 @@ export class SubscriptionHandler {
    */
   public async cancelSubscription(id: string): Promise<ISubscriptionResult> {
     try {
-      const response = await this.mp.preapproval.update({
-        id: id,
-        status: "cancelled"
+      const response = await this.preApproval.update({
+        id,
+        body: { status: "cancelled" }
       });
       
-      if (!response || !response.body) {
+      if (!response || !response.id) {
         throw new Error(`Erro ao cancelar assinatura ${id}`);
       }
 
       // Formatar o resultado
-      return this.formatSubscriptionResponse(response.body);
+      return this.formatSubscriptionResponse(response);
     } catch (error) {
       console.error(`❌ Erro ao cancelar assinatura ${id} no Mercado Pago:`, error);
       throw error;
@@ -112,17 +123,17 @@ export class SubscriptionHandler {
    */
   public async pauseSubscription(id: string): Promise<ISubscriptionResult> {
     try {
-      const response = await this.mp.preapproval.update({
-        id: id,
-        status: "paused"
+      const response = await this.preApproval.update({
+        id,
+        body: { status: "paused" }
       });
       
-      if (!response || !response.body) {
+      if (!response || !response.id) {
         throw new Error(`Erro ao pausar assinatura ${id}`);
       }
 
       // Formatar o resultado
-      return this.formatSubscriptionResponse(response.body);
+      return this.formatSubscriptionResponse(response);
     } catch (error) {
       console.error(`❌ Erro ao pausar assinatura ${id} no Mercado Pago:`, error);
       throw error;
@@ -136,17 +147,17 @@ export class SubscriptionHandler {
    */
   public async reactivateSubscription(id: string): Promise<ISubscriptionResult> {
     try {
-      const response = await this.mp.preapproval.update({
-        id: id,
-        status: "authorized"
+      const response = await this.preApproval.update({
+        id,
+        body: { status: "authorized" }
       });
       
-      if (!response || !response.body) {
+      if (!response || !response.id) {
         throw new Error(`Erro ao reativar assinatura ${id}`);
       }
 
       // Formatar o resultado
-      return this.formatSubscriptionResponse(response.body);
+      return this.formatSubscriptionResponse(response);
     } catch (error) {
       console.error(`❌ Erro ao reativar assinatura ${id} no Mercado Pago:`, error);
       throw error;

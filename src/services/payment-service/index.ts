@@ -1,7 +1,7 @@
 import { Router } from 'express';
 import paymentRoutes from './routes/payment.routes';
 import subscriptionRoutes from './routes/subscription.routes';
-import { initMercadoPago } from '@shared/config/mercadopago';
+import { createMercadoPagoClient } from '@shared/config/mercadopago';
 
 /**
  * Inicializa o serviço de pagamentos e configura as rotas
@@ -12,7 +12,7 @@ export const initPaymentService = (): Router => {
 
   // Inicializa o SDK do Mercado Pago
   try {
-    initMercadoPago();
+    createMercadoPagoClient();
     console.log('✅ Serviço de Pagamentos inicializado com sucesso');
   } catch (error) {
     console.error('❌ Erro ao inicializar o serviço de pagamentos:', error);

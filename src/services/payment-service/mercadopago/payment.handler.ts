@@ -1,4 +1,4 @@
-import mercadopago from 'mercadopago';
+import { MercadoPagoConfig, Payment } from 'mercadopago';
 import { 
   ICreatePaymentDTO, 
   IPaymentResult, 
@@ -10,10 +10,19 @@ import { StatusMapper } from './status.mapper';
  * Handler especializado em operações de pagamento com o Mercado Pago
  */
 export class PaymentHandler {
+  private payment: Payment;
+
+  /**
+   * Inicializa o handler com a configuração do Mercado Pago
+   * @param client Instância configurada do cliente MercadoPago
+   * @param statusMapper Mapeador de status do Mercado Pago para formatos internos
+   */
   constructor(
-    private mp: typeof mercadopago,
+    private client: MercadoPagoConfig,
     private statusMapper: StatusMapper
-  ) {}
+  ) {
+    this.payment = new Payment(this.client);
+  }
 
   /**
    * Cria um pagamento único no Mercado Pago
@@ -26,14 +35,14 @@ export class PaymentHandler {
       const paymentData = this.preparePaymentData(data);
 
       // Criar o pagamento no Mercado Pago
-      const response = await this.mp.payment.create(paymentData);
+      const response = await this.payment.create({ body: paymentData });
       
-      if (!response || !response.body) {
+      if (!response || !response.id) {
         throw new Error('Resposta inválida do Mercado Pago');
       }
 
       // Formatar o resultado
-      return this.formatPaymentResponse(response.body);
+      return this.formatPaymentResponse(response);
     } catch (error) {
       console.error('❌ Erro ao criar pagamento no Mercado Pago:', error);
       throw error;
@@ -47,14 +56,14 @@ export class PaymentHandler {
    */
   public async getPayment(id: string): Promise<IPaymentResult> {
     try {
-      const response = await this.mp.payment.get(Number(id));
+      const response = await this.payment.get({ id: Number(id) });
       
-      if (!response || !response.body) {
+      if (!response || !response.id) {
         throw new Error(`Pagamento com ID ${id} não encontrado`);
       }
 
       // Formatar o resultado
-      return this.formatPaymentResponse(response.body);
+      return this.formatPaymentResponse(response);
     } catch (error) {
       console.error(`❌ Erro ao consultar pagamento ${id} no Mercado Pago:`, error);
       throw error;
@@ -68,14 +77,14 @@ export class PaymentHandler {
    */
   public async cancelPayment(id: string): Promise<IPaymentResult> {
     try {
-      const response = await this.mp.payment.cancel(Number(id));
+      const response = await this.payment.cancel({ id: Number(id) });
       
-      if (!response || !response.body) {
+      if (!response || !response.id) {
         throw new Error(`Erro ao cancelar pagamento ${id}`);
       }
 
       // Formatar o resultado
-      return this.formatPaymentResponse(response.body);
+      return this.formatPaymentResponse(response);
     } catch (error) {
       console.error(`❌ Erro ao cancelar pagamento ${id} no Mercado Pago:`, error);
       throw error;
@@ -89,17 +98,14 @@ export class PaymentHandler {
    */
   public async refundPayment(id: string): Promise<IPaymentResult> {
     try {
-      const response = await this.mp.refund.create({ payment_id: Number(id) });
+      // Criar o reembolso
+      await this.payment.refund({ id: Number(id) });
       
-      if (!response || !response.body) {
-        throw new Error(`Erro ao reembolsar pagamento ${id}`);
-      }
-
       // Consultar o pagamento para obter os dados atualizados
-      const paymentResponse = await this.mp.payment.get(Number(id));
+      const paymentResponse = await this.payment.get({ id: Number(id) });
 
       // Formatar o resultado
-      return this.formatPaymentResponse(paymentResponse.body);
+      return this.formatPaymentResponse(paymentResponse);
     } catch (error) {
       console.error(`❌ Erro ao reembolsar pagamento ${id} no Mercado Pago:`, error);
       throw error;
@@ -144,7 +150,6 @@ export class PaymentHandler {
         throw new Error('Token de cartão é obrigatório para pagamentos com cartão');
       }
       
-      // @ts-ignore - O tipo da API do MP é diferente do nosso
       paymentData.token = data.card.token;
     }
 

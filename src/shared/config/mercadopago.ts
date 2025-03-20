@@ -1,13 +1,14 @@
-import mercadopago from 'mercadopago';
+import { MercadoPagoConfig } from 'mercadopago';
+import crypto from 'crypto';
 import dotenv from 'dotenv';
 
 dotenv.config();
 
 /**
- * Configuração do SDK do Mercado Pago
- * Inicializa o SDK com as credenciais configuradas no ambiente
+ * Cria e retorna uma instância configurada do cliente Mercado Pago
+ * @returns Instância configurada do MercadoPagoConfig
  */
-export const initMercadoPago = (): void => {
+export const createMercadoPagoClient = (): MercadoPagoConfig => {
   try {
     const accessToken = process.env.MERCADOPAGO_ACCESS_TOKEN;
     
@@ -15,23 +16,18 @@ export const initMercadoPago = (): void => {
       throw new Error('MERCADOPAGO_ACCESS_TOKEN não configurado nas variáveis de ambiente');
     }
     
-    // Configura o SDK com o access token
-    mercadopago.configure({
-      access_token: accessToken
+    // Configura o cliente com o access token
+    const client = new MercadoPagoConfig({ 
+      accessToken,
+      options: { timeout: 5000 }
     });
     
     console.log('✅ Mercado Pago SDK configurado com sucesso');
+    return client;
   } catch (error) {
     console.error('❌ Erro ao configurar Mercado Pago SDK:', error);
     throw error;
   }
-};
-
-/**
- * Retorna a instância configurada do SDK do Mercado Pago
- */
-export const getMercadoPagoInstance = (): typeof mercadopago => {
-  return mercadopago;
 };
 
 /**
@@ -42,19 +38,29 @@ export const getMercadoPagoInstance = (): typeof mercadopago => {
  */
 export const isWebhookSignatureValid = (signature: string, data: any): boolean => {
   try {
-    // Implementar verificação de assinatura com a assinatura secreta
-    // Esta é uma implementação simplificada para fins de exemplo
-    const secret = process.env.MERCADOPAGO_WEBHOOK_SECRET;
+    // Implementação de verificação da assinatura do webhook do Mercado Pago
+    const webhookSecret = process.env.MERCADOPAGO_WEBHOOK_SECRET;
     
-    if (!secret) {
+    if (!webhookSecret) {
       console.warn('⚠️ MERCADOPAGO_WEBHOOK_SECRET não configurado nas variáveis de ambiente');
       return false;
     }
     
-    // Aqui você deve implementar a lógica de verificação específica do Mercado Pago
-    // Verificar a documentação para detalhes: https://www.mercadopago.com.br/developers/pt/docs/checkout-api/webhooks/webhooks
+    // Criar o HMAC com SHA256
+    const hmac = crypto.createHmac('sha256', webhookSecret);
     
-    return true; // Substitua por uma validação real
+    // Adicionar o payload como string ao HMAC
+    const payload = typeof data === 'string' ? data : JSON.stringify(data);
+    hmac.update(payload);
+    
+    // Gerar a assinatura esperada
+    const expectedSignature = hmac.digest('hex');
+    
+    // Comparar a assinatura recebida com a esperada de forma segura contra ataques de timing
+    return crypto.timingSafeEqual(
+      Buffer.from(signature), 
+      Buffer.from(expectedSignature)
+    );
   } catch (error) {
     console.error('❌ Erro ao validar assinatura de webhook:', error);
     return false;
@@ -62,7 +68,6 @@ export const isWebhookSignatureValid = (signature: string, data: any): boolean =
 };
 
 export default {
-  initMercadoPago,
-  getMercadoPagoInstance,
+  createMercadoPagoClient,
   isWebhookSignatureValid
 };

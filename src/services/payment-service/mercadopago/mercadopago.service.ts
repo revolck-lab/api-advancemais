@@ -1,5 +1,4 @@
-import mercadopago from 'mercadopago';
-import { getMercadoPagoInstance } from '@shared/config/mercadopago';
+import { MercadoPagoConfig } from 'mercadopago';
 import { 
   ICreatePaymentDTO, 
   IPaymentResult, 
@@ -18,7 +17,7 @@ import { StatusMapper } from './status.mapper';
  * Delega operações específicas para handlers especializados
  */
 export class MercadoPagoService {
-  private mp: typeof mercadopago;
+  private client: MercadoPagoConfig;
   private paymentHandler: PaymentHandler;
   private subscriptionHandler: SubscriptionHandler;
   private statusMapper: StatusMapper;
@@ -27,10 +26,22 @@ export class MercadoPagoService {
    * Inicializa o serviço com a instância configurada do Mercado Pago
    */
   constructor() {
-    this.mp = getMercadoPagoInstance();
+    // Obter access token do ambiente
+    const accessToken = process.env.MERCADOPAGO_ACCESS_TOKEN;
+    
+    if (!accessToken) {
+      throw new Error('MERCADOPAGO_ACCESS_TOKEN não configurado nas variáveis de ambiente');
+    }
+    
+    // Configurar o cliente do Mercado Pago
+    this.client = new MercadoPagoConfig({ 
+      accessToken,
+      options: { timeout: 5000, idempotencyKey: 'advancemais-' + Date.now() }
+    });
+    
     this.statusMapper = new StatusMapper();
-    this.paymentHandler = new PaymentHandler(this.mp, this.statusMapper);
-    this.subscriptionHandler = new SubscriptionHandler(this.mp, this.statusMapper);
+    this.paymentHandler = new PaymentHandler(this.client, this.statusMapper);
+    this.subscriptionHandler = new SubscriptionHandler(this.client, this.statusMapper);
   }
 
   // ==================== MÉTODOS DE PAGAMENTO ====================
