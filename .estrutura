@@ -1,81 +1,97 @@
 advancemais-api/
 ├── src/
 │   ├── api-gateway/                      # API Gateway
-│   │   ├── index.js                      # Ponto de entrada do gateway
-│   │   ├── routes.js                     # Configuração de rotas
-│   │   └── middleware/                   # Middleware compartilhado
-│   │       ├── auth.middleware.js        # Middleware de autenticação
-│   │       ├── error.middleware.js       # Tratamento de erros
-│   │       └── validation.middleware.js  # Validação de entrada
+│   │   ├── controllers/                  # Controladores do gateway
+│   │   ├── middleware/                   # Middleware compartilhado
+│   │   │   ├── auth.middleware.ts        # Middleware de autenticação
+│   │   │   ├── error.middleware.ts       # Tratamento de erros
+│   │   │   └── validation.middleware.ts  # Validação de entrada
+│   │   ├── routes/                       # Configuração de rotas
+│   │   │   ├── index.ts                  # Exporta todas as rotas
+│   │   │   ├── auth.routes.ts            # Rotas de autenticação
+│   │   │   ├── cms.routes.ts             # Rotas do CMS
+│   │   │   └── payment.routes.ts         # Rotas de pagamento
+│   │   └── index.ts                      # Configuração do gateway
 │   │
 │   ├── services/                         # Microserviços da aplicação
 │   │   ├── auth-service/                 # Serviço de Autenticação
-│   │   │   ├── controllers/
-│   │   │   ├── models/
-│   │   │   ├── routes/
-│   │   │   ├── validators/
-│   │   │   └── index.js
+│   │   │   ├── controllers/              # Controladores
+│   │   │   ├── models/                   # Modelos de domínio
+│   │   │   ├── routes/                   # Rotas internas
+│   │   │   ├── validators/               # Validadores
+│   │   │   └── index.ts                  # Ponto de entrada
+│   │   │
+│   │   ├── cms-service/                  # Serviço de CMS para o site
+│   │   │   ├── controllers/              # Controladores
+│   │   │   ├── models/                   # Modelos de domínio
+│   │   │   ├── routes/                   # Rotas internas
+│   │   │   └── index.ts                  # Ponto de entrada
 │   │   │
 │   │   ├── user-service/                 # Serviço de Usuários
-│   │   │   ├── controllers/
-│   │   │   ├── models/
-│   │   │   ├── routes/
-│   │   │   ├── validators/
-│   │   │   └── index.js
-│   │   │
-│   │   ├── product-service/              # Serviço de Produtos
-│   │   │   ├── controllers/
-│   │   │   ├── models/
-│   │   │   ├── routes/
-│   │   │   ├── validators/
-│   │   │   └── index.js
+│   │   │   ├── controllers/              # Controladores
+│   │   │   ├── models/                   # Modelos de domínio
+│   │   │   ├── routes/                   # Rotas internas
+│   │   │   └── index.ts                  # Ponto de entrada
 │   │   │
 │   │   ├── payment-service/              # Serviço de Pagamentos
-│   │   │   ├── controllers/
-│   │   │   ├── models/
-│   │   │   ├── routes/
-│   │   │   ├── validators/
-│   │   │   ├── mercadopago/              # Integrações específicas
-│   │   │   └── index.js
+│   │   │   ├── controllers/              # Controladores
+│   │   │   ├── models/                   # Modelos de domínio
+│   │   │   ├── routes/                   # Rotas internas
+│   │   │   ├── mercadopago/              # Integração com Mercado Pago
+│   │   │   └── index.ts                  # Ponto de entrada
 │   │   │
 │   │   └── notification-service/         # Serviço de Notificações
-│   │       ├── controllers/
-│   │       ├── models/
-│   │       ├── email-templates/
-│   │       ├── providers/
-│   │       └── index.js
+│   │       ├── controllers/              # Controladores
+│   │       ├── models/                   # Modelos de domínio
+│   │       ├── routes/                   # Rotas internas
+│   │       ├── email-templates/          # Templates de email
+│   │       └── index.ts                  # Ponto de entrada
 │   │
-│   ├── shared/                           # Código compartilhado entre serviços
+│   ├── shared/                           # Código compartilhado
 │   │   ├── config/                       # Configurações globais
-│   │   │   ├── database.js               # Configuração banco de dados
-│   │   │   ├── aws.js                    # Configuração AWS
-│   │   │   ├── mercadopago.js            # Configuração Mercado Pago
-│   │   │   └── mail.js                   # Configuração SMTP
+│   │   │   ├── database.ts               # Configuração do banco
+│   │   │   ├── env/                      # Variáveis de ambiente
+│   │   │   │   └── .env.example          # Exemplo de variáveis
+│   │   │   ├── mercadopago.ts            # Configuração Mercado Pago
+│   │   │   └── mail.ts                   # Configuração SMTP
 │   │   │
-│   │   ├── utils/                        # Utilitários compartilhados
-│   │   │   ├── logger.js                 # Serviço de log
-│   │   │   ├── validators.js             # Validadores comuns
-│   │   │   └── helpers.js                # Funções auxiliares
+│   │   ├── interfaces/                   # Interfaces compartilhadas
+│   │   │   ├── request.interface.ts      # Interfaces de requisição
+│   │   │   └── response.interface.ts     # Interfaces de resposta
 │   │   │
-│   │   └── event-bus/                    # Sistema de eventos
-│   │       ├── index.js                  # Configuração do barramento
-│   │       ├── publishers.js             # Métodos para publicar eventos
-│   │       └── subscribers.js            # Métodos para receber eventos
+│   │   ├── types/                        # Tipos compartilhados
+│   │   │   └── roles.types.ts            # Definição de roles
+│   │   │
+│   │   ├── utils/                        # Utilitários
+│   │   │   ├── logger.ts                 # Serviço de log
+│   │   │   ├── validators.ts             # Validadores comuns
+│   │   │   └── helpers.ts                # Funções auxiliares
+│   │   │
+│   │   └── events/                       # Sistema de eventos
+│   │       ├── index.ts                  # Configuração do barramento
+│   │       ├── publishers.ts             # Publicadores de eventos
+│   │       └── subscribers.ts            # Assinantes de eventos
 │   │
-│   ├── app.js                            # Configuração da aplicação
-│   └── server.js                         # Inicialização do servidor
+│   ├── public/                           # Arquivos públicos
+│   │   └── docs/                         # Documentação pública
+│   │
+│   ├── swagger/                          # Configuração do Swagger
+│   │   ├── schemas/                      # Schemas da documentação
+│   │   └── index.ts                      # Configuração principal
+│   │
+│   ├── app.ts                            # Configuração da aplicação
+│   └── server.ts                         # Inicialização do servidor
 │
-├── prisma/                               # Modelos e migrações do Prisma
-│   ├── schema.prisma
-│   └── migrations/
+├── prisma/                               # Modelos e migrações Prisma
+│   ├── schema.prisma                     # Schema do banco de dados
+│   └── migrations/                       # Migrações geradas
 │
 ├── tests/                                # Testes
-│   ├── unit/
-│   │   └── services/
-│   ├── integration/
-│   └── e2e/
+│   ├── unit/                             # Testes unitários
+│   ├── integration/                      # Testes de integração
+│   └── e2e/                              # Testes end-to-end
 │
 ├── .env.example                          # Exemplo de variáveis de ambiente
 ├── .gitignore                            # Arquivos ignorados pelo git
 ├── package.json                          # Dependências e scripts
-└── README.md                             # Documentação
+└── README.md                             # Documentação principal
