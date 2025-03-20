@@ -7,6 +7,7 @@ import dotenv from 'dotenv';
 import { PrismaClient } from '@prisma/client';
 import path from 'path';
 import SwaggerConfig from './swagger';
+import AuthMiddleware from './swagger/middleware/auth.middleware';
 
 // Carrega variáveis de ambiente
 dotenv.config();
@@ -103,6 +104,9 @@ class App {
       methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH'],
       allowedHeaders: ['Content-Type', 'Authorization']
     }));
+
+    // Autenticação para rotas da documentação Swagger
+    this.app.use(AuthMiddleware);
     
     // Compressão para melhorar performance
     this.app.use(compression());

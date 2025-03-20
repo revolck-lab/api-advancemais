@@ -3,283 +3,340 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <meta name="description" content="API AdvanceMais - Plataforma de serviços para advogados e escritórios jurídicos">
-    <title>AdvanceMais API</title>
-    <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
-    <link rel="icon" href="/favicon.ico" type="image/x-icon">
+    <title>AdvanceMais API - Status</title>
+    <!-- Bootstrap CSS -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
     <style>
-        :root {
-            --primary: #3498db;
-            --primary-dark: #2980b9;
-            --secondary: #2ecc71;
-            --dark: #2c3e50;
-            --light: #ecf0f1;
-            --danger: #e74c3c;
-        }
-        
-        * {
-            margin: 0;
-            padding: 0;
-            box-sizing: border-box;
-        }
+        /* Estilo Apple-like com fonte arredondada */
+        @import url('https://fonts.googleapis.com/css2?family=Nunito:wght@400;500;600;700&display=swap');
         
         body {
-            font-family: 'Inter', sans-serif;
-            line-height: 1.6;
-            color: var(--dark);
-            background-color: var(--light);
+            font-family: 'Nunito', -apple-system, BlinkMacSystemFont, 'SF Pro Text', 'SF Pro Display', system-ui, sans-serif;
+            background-color: #f8f9fa;
+            color: #343a40;
+            padding-top: 2rem;
+            padding-bottom: 2rem;
         }
         
         .container {
-            max-width: 1200px;
-            margin: 0 auto;
-            padding: 0 20px;
+            max-width: 900px;
         }
         
-        header {
-            background-color: var(--primary);
-            color: white;
-            padding: 2rem 0;
-            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+        .logo {
+            font-weight: 700;
+            font-size: 28px;
+            letter-spacing: -0.5px;
         }
         
-        header h1 {
-            font-size: 2.5rem;
-            margin-bottom: 0.5rem;
+        .primary-text {
+            color: #212529;
         }
         
-        .subtitle {
-            font-weight: 500;
-            opacity: 0.9;
-        }
-        
-        main {
-            padding: 3rem 0;
-        }
-        
-        .card {
-            background: white;
-            border-radius: 8px;
-            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
-            padding: 2rem;
-            margin-bottom: 2rem;
-        }
-        
-        h2 {
-            color: var(--primary-dark);
-            margin-bottom: 1rem;
-            position: relative;
-            padding-bottom: 0.5rem;
-        }
-        
-        h2::after {
-            content: '';
-            position: absolute;
-            bottom: 0;
-            left: 0;
-            width: 50px;
-            height: 3px;
-            background-color: var(--secondary);
-        }
-        
-        .api-section {
-            margin-bottom: 1.5rem;
-        }
-        
-        .endpoint {
-            display: flex;
-            align-items: center;
-            background-color: #f8f9fa;
-            border-radius: 4px;
-            padding: 0.75rem 1rem;
-            margin-bottom: 0.5rem;
-        }
-        
-        .method {
-            font-weight: 600;
-            padding: 0.25rem 0.5rem;
-            border-radius: 4px;
-            margin-right: 1rem;
-            color: white;
-            font-size: 0.85rem;
-            min-width: 60px;
-            text-align: center;
-        }
-        
-        .get { background-color: #61affe; }
-        .post { background-color: #49cc90; }
-        .put { background-color: #fca130; }
-        .delete { background-color: #f93e3e; }
-        
-        .path {
-            font-family: monospace;
-            font-size: 1rem;
-        }
-        
-        .btn {
-            display: inline-block;
-            padding: 0.5rem 1.5rem;
-            background-color: var(--primary);
-            color: white;
-            text-decoration: none;
-            border-radius: 4px;
-            font-weight: 500;
-            transition: all 0.2s ease;
-        }
-        
-        .btn:hover {
-            background-color: var(--primary-dark);
-            transform: translateY(-2px);
-        }
-        
-        .version-info {
-            text-align: right;
-            margin-top: 0.5rem;
-            font-size: 0.9rem;
-            color: #6c757d;
-        }
-        
-        footer {
-            background-color: var(--dark);
-            color: white;
-            padding: 2rem 0;
-            text-align: center;
+        .accent-text {
+            color: #0d6efd;
         }
         
         .status-card {
-            display: flex;
-            align-items: center;
-            margin-bottom: 1rem;
+            border-radius: 12px;
+            border: none;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.05);
+            overflow: hidden;
+            margin-bottom: 1.5rem;
         }
         
-        .status-indicator {
-            width: 12px;
-            height: 12px;
+        .card-header {
+            background-color: #fff;
+            border-bottom: 1px solid rgba(0,0,0,0.08);
+            padding: 1rem 1.25rem;
+        }
+        
+        .status-dot {
+            display: inline-block;
+            width: 10px;
+            height: 10px;
             border-radius: 50%;
-            margin-right: 0.5rem;
+            margin-right: 8px;
         }
         
-        .status-active {
-            background-color: var(--secondary);
+        .status-up {
+            background-color: #198754;
         }
-
-        @media (max-width: 768px) {
-            header h1 {
-                font-size: 2rem;
-            }
-            
-            .endpoint {
-                flex-direction: column;
-                align-items: flex-start;
-            }
-            
-            .method {
-                margin-bottom: 0.5rem;
-            }
+        
+        .status-down {
+            background-color: #dc3545;
+        }
+        
+        .status-unknown {
+            background-color: #ffc107;
+        }
+        
+        .table {
+            margin-bottom: 0;
+        }
+        
+        .table th {
+            font-weight: 600;
+            border-top: none;
+        }
+        
+        .status-available {
+            color: #198754;
+            font-weight: 500;
+        }
+        
+        .status-unavailable {
+            color: #dc3545;
+            font-weight: 500;
+        }
+        
+        .badge {
+            font-weight: 500;
+            padding: 0.5em 0.75em;
+            border-radius: 6px;
+        }
+        
+        .badge-get {
+            background-color: #0dcaf0;
+        }
+        
+        .badge-post {
+            background-color: #20c997;
+        }
+        
+        .badge-put {
+            background-color: #fd7e14;
+        }
+        
+        .badge-delete {
+            background-color: #dc3545;
+        }
+        
+        .docs-link {
+            border-radius: 8px;
+            padding: 0.5rem 1.25rem;
+            font-weight: 600;
+            letter-spacing: -0.3px;
+        }
+        
+        .footer {
+            color: #6c757d;
+            font-size: 0.9rem;
         }
     </style>
 </head>
 <body>
-    <header>
-        <div class="container">
-            <h1>AdvanceMais API</h1>
-            <p class="subtitle">Plataforma de serviços integrados para advogados e escritórios jurídicos</p>
-        </div>
-    </header>
-    
-    <main class="container">
-        <div class="card">
-            <div class="status-card">
-                <div class="status-indicator status-active"></div>
-                <div>
-                    <strong>Status da API:</strong> Operacional
+    <div class="container">
+        <header class="mb-4 pb-2 border-bottom">
+            <div class="logo mb-2">
+                <span class="primary-text">Advance</span><span class="accent-text">Mais</span> <small class="text-muted">API</small>
+            </div>
+            <p class="text-muted">Plataforma de serviços para advogados e escritórios jurídicos</p>
+        </header>
+        
+        <div class="card status-card">
+            <div class="card-header d-flex justify-content-between align-items-center">
+                <h5 class="mb-0">Status do Sistema</h5>
+                <div id="api-status" class="d-flex align-items-center">
+                    <div class="status-dot status-unknown"></div>
+                    <span>Verificando...</span>
                 </div>
             </div>
-            
-            <div id="version-info" class="version-info">
-                <span>Versão: 1.0.0</span>
+            <div class="card-body">
+                <div id="version-info" class="mb-4">
+                    <div class="placeholder-glow">
+                        <span class="placeholder col-4"></span>
+                        <span class="placeholder col-5"></span>
+                        <span class="placeholder col-6"></span>
+                    </div>
+                </div>
+                
+                <h6 class="card-title mb-3">Serviços</h6>
+                <div class="table-responsive">
+                    <table class="table table-hover" id="services-table">
+                        <thead>
+                            <tr>
+                                <th scope="col">Serviço</th>
+                                <th scope="col">Status</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr id="service-auth">
+                                <td>Autenticação</td>
+                                <td><span class="placeholder col-4"></span></td>
+                            </tr>
+                            <tr id="service-payment">
+                                <td>Pagamentos</td>
+                                <td><span class="placeholder col-4"></span></td>
+                            </tr>
+                            <tr id="service-notification">
+                                <td>Notificações</td>
+                                <td><span class="placeholder col-4"></span></td>
+                            </tr>
+                            <tr id="service-cms">
+                                <td>CMS</td>
+                                <td><span class="placeholder col-4"></span></td>
+                            </tr>
+                            <tr id="service-database">
+                                <td>Banco de Dados</td>
+                                <td><span class="placeholder col-4"></span></td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
             </div>
         </div>
         
-        <div class="card">
-            <h2>Sobre a API</h2>
-            <p>A API do AdvanceMais fornece acesso programático aos recursos da plataforma, permitindo a integração com sistemas jurídicos, gerenciamento de usuários, empresas, pagamentos e conteúdo do site.</p>
-            
-            <div class="api-section">
-                <h3>Principais recursos:</h3>
-                <ul>
-                    <li>Autenticação segura via JWT</li>
-                    <li>Gerenciamento de usuários e empresas</li>
-                    <li>Processamento de pagamentos</li>
-                    <li>Sistema de CMS para o site</li>
-                    <li>Notificações por e-mail e SMS</li>
-                </ul>
+        <div class="card status-card">
+            <div class="card-header">
+                <h5 class="mb-0">Rotas Principais</h5>
             </div>
-            
-            <a href="/api-docs" class="btn">Ver Documentação Completa</a>
+            <div class="card-body">
+                <div class="table-responsive">
+                    <table class="table table-hover">
+                        <thead>
+                            <tr>
+                                <th scope="col" style="width: 100px">Método</th>
+                                <th scope="col">Endpoint</th>
+                                <th scope="col">Descrição</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr>
+                                <td><span class="badge badge-get">GET</span></td>
+                                <td><code>/api/health</code></td>
+                                <td>Verificação de saúde da API</td>
+                            </tr>
+                            <tr>
+                                <td><span class="badge badge-post">POST</span></td>
+                                <td><code>/api/auth/login</code></td>
+                                <td>Autenticação de usuários</td>
+                            </tr>
+                            <tr>
+                                <td><span class="badge badge-post">POST</span></td>
+                                <td><code>/api/auth/register</code></td>
+                                <td>Registro de novos usuários</td>
+                            </tr>
+                            <tr>
+                                <td><span class="badge badge-get">GET</span></td>
+                                <td><code>/api/users</code></td>
+                                <td>Listagem de usuários</td>
+                            </tr>
+                            <tr>
+                                <td><span class="badge badge-get">GET</span></td>
+                                <td><code>/api/companies</code></td>
+                                <td>Listagem de empresas</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+                
+                <div class="text-center mt-4">
+                    <a href="/api-docs" class="btn btn-primary docs-link">Ver Documentação Completa</a>
+                </div>
+            </div>
         </div>
         
-        <div class="card">
-            <h2>Endpoints Principais</h2>
-            
-            <div class="endpoint">
-                <span class="method get">GET</span>
-                <span class="path">/api/health</span>
-            </div>
-            
-            <div class="endpoint">
-                <span class="method post">POST</span>
-                <span class="path">/api/auth/login</span>
-            </div>
-            
-            <div class="endpoint">
-                <span class="method post">POST</span>
-                <span class="path">/api/auth/register</span>
-            </div>
-            
-            <div class="endpoint">
-                <span class="method get">GET</span>
-                <span class="path">/api/users</span>
-            </div>
-            
-            <div class="endpoint">
-                <span class="method get">GET</span>
-                <span class="path">/api/companies</span>
-            </div>
-        </div>
-    </main>
-    
-    <footer>
-        <div class="container">
-            <p>&copy; 2025 AdvanceMais. Todos os direitos reservados.</p>
-        </div>
-    </footer>
+        <footer class="text-center mt-4 footer">
+            &copy; 2025 AdvanceMais
+        </footer>
+    </div>
 
+    <!-- Bootstrap JS Bundle with Popper -->
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
+    
     <script>
-        // Buscar informações de saúde da API para mostrar status real
-        fetch('/api/health')
-            .then(response => response.json())
-            .then(data => {
-                if (data.status === 'ok') {
-                    // Atualizar o status se necessário
-                    document.querySelector('.status-indicator').classList.add('status-active');
+        // Função para atualizar o status da API
+        function updateApiStatus() {
+            fetch('/api/health')
+                .then(response => response.json())
+                .then(data => {
+                    // Atualizar status principal
+                    const statusDot = document.querySelector('#api-status .status-dot');
+                    const statusText = document.querySelector('#api-status span');
                     
-                    // Atualizar a versão
-                    if (data.version) {
-                        document.getElementById('version-info').innerHTML = `
-                            <span>Versão: ${data.version}</span>
-                            <br>
-                            <span>Atualizado em: ${new Date(data.timestamp).toLocaleString()}</span>
-                        `;
+                    if (data.status === 'ok') {
+                        statusDot.className = 'status-dot status-up';
+                        statusText.textContent = 'Operacional';
+                    } else {
+                        statusDot.className = 'status-dot status-down';
+                        statusText.textContent = 'Problema Detectado';
                     }
-                }
-            })
-            .catch(error => {
-                console.error('Erro ao verificar status:', error);
-                document.querySelector('.status-indicator').style.backgroundColor = 'var(--danger)';
-            });
+                    
+                    // Atualizar informações de versão
+                    const versionElement = document.getElementById('version-info');
+                    versionElement.innerHTML = `
+                        <div class="row">
+                            <div class="col-md-4">
+                                <p class="mb-1"><strong>Versão:</strong> ${data.version || 'N/A'}</p>
+                            </div>
+                            <div class="col-md-4">
+                                <p class="mb-1"><strong>Ambiente:</strong> ${data.environment || 'N/A'}</p>
+                            </div>
+                            <div class="col-md-4">
+                                <p class="mb-1"><strong>Atualizado:</strong> ${new Date(data.timestamp).toLocaleString()}</p>
+                            </div>
+                        </div>
+                    `;
+                    
+                    // Atualizar status dos serviços
+                    if (data.services) {
+                        updateServiceStatus('auth', data.services.auth);
+                        updateServiceStatus('payment', data.services.payment);
+                        updateServiceStatus('notification', data.services.notification);
+                        updateServiceStatus('cms', data.services.cms);
+                    }
+                    
+                    // Atualizar status do banco de dados
+                    updateServiceStatus('database', data.database === 'connected' ? 'available' : 'unavailable');
+                })
+                .catch(error => {
+                    console.error('Erro ao verificar status:', error);
+                    const statusDot = document.querySelector('#api-status .status-dot');
+                    const statusText = document.querySelector('#api-status span');
+                    
+                    statusDot.className = 'status-dot status-down';
+                    statusText.textContent = 'Indisponível';
+                    
+                    // Definir todos os serviços como indisponíveis em caso de falha
+                    updateServiceStatus('auth', 'unavailable');
+                    updateServiceStatus('payment', 'unavailable');
+                    updateServiceStatus('notification', 'unavailable');
+                    updateServiceStatus('cms', 'unavailable');
+                    updateServiceStatus('database', 'unavailable');
+                    
+                    // Atualizar informações de versão em caso de erro
+                    const versionElement = document.getElementById('version-info');
+                    versionElement.innerHTML = `
+                        <div class="alert alert-danger">
+                            <i class="bi bi-exclamation-triangle-fill"></i> Não foi possível conectar ao servidor.
+                        </div>
+                    `;
+                });
+        }
+        
+        // Função auxiliar para atualizar o status de um serviço
+        function updateServiceStatus(serviceName, status) {
+            const serviceRow = document.getElementById(`service-${serviceName}`);
+            if (!serviceRow) return;
+            
+            const statusCell = serviceRow.querySelector('td:last-child');
+            
+            if (status === 'available') {
+                statusCell.innerHTML = '<span class="status-available">Disponível</span>';
+            } else if (status === 'unavailable') {
+                statusCell.innerHTML = '<span class="status-unavailable">Indisponível</span>';
+            } else {
+                statusCell.textContent = status || 'Desconhecido';
+            }
+        }
+        
+        // Verificar status inicial
+        document.addEventListener('DOMContentLoaded', function() {
+            updateApiStatus();
+            
+            // Atualizar status a cada 60 segundos
+            setInterval(updateApiStatus, 60000);
+        });
     </script>
 </body>
 </html>

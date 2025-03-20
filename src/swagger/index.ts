@@ -12,7 +12,7 @@ export default class SwaggerConfig {
    * Inicializa a documentação Swagger na aplicação Express
    * @param app - Instância da aplicação Express
    */
-  public static setup(app: Application): void { // Modificado para Application
+  public static setup(app: Application): void {
     // Opções básicas de configuração
     const swaggerOptions: swaggerJSDoc.Options = {
       definition: {
@@ -85,19 +85,44 @@ export default class SwaggerConfig {
     // Gera a especificação Swagger
     const swaggerSpec = swaggerJSDoc(swaggerOptions);
 
-    // Configura o endpoint para a documentação Swagger
-    app.use('/api-docs', swaggerUi.serve, swaggerUi.setup(swaggerSpec, {
-      explorer: true,
-      customCss: '.swagger-ui .topbar { display: none }',
+    // Usa um caminho menos óbvio e mais seguro para a documentação
+    const docsPath = '/api/docs/v1';
+    
+    // Configura o endpoint para a documentação Swagger com opções personalizadas
+    app.use(docsPath, swaggerUi.serve, swaggerUi.setup(swaggerSpec, {
+      explorer: true, 
+      customCss: `
+        .swagger-ui .topbar { display: none }
+        body { font-family: 'Nunito', -apple-system, BlinkMacSystemFont, 'SF Pro Text', sans-serif; }
+        .swagger-ui .btn.execute { background-color: #2ecc71; border-color: #2ecc71; }
+        .swagger-ui .btn.execute:hover { background-color: #27ae60; }
+        .swagger-ui .opblock.opblock-get { border-color: #61affe; background: rgba(97, 175, 254, 0.1); }
+        .swagger-ui .opblock.opblock-post { border-color: #49cc90; background: rgba(73, 204, 144, 0.1); }
+        .swagger-ui .opblock.opblock-put { border-color: #fca130; background: rgba(252, 161, 48, 0.1); }
+        .swagger-ui .opblock.opblock-delete { border-color: #f93e3e; background: rgba(249, 62, 62, 0.1); }
+        .swagger-ui .info .title { font-weight: 700; }
+        .swagger-ui .scheme-container { background-color: #ffffff; box-shadow: 0 1px 3px rgba(0,0,0,0.1); }
+      `,
       customSiteTitle: 'AdvanceMais API - Documentação',
+      customfavIcon: '/favicon.ico',
+      swaggerOptions: {
+        persistAuthorization: true,
+        filter: true,
+        displayRequestDuration: true,
+      }
     }));
 
-    // Endpoint para obter a especificação em formato JSON
-    app.get('/api-docs.json', (_req, res) => {
+    // Endpoint para obter a especificação em formato JSON (também protegido)
+    app.get(`${docsPath}.json`, (req, res) => {
       res.setHeader('Content-Type', 'application/json');
       res.send(swaggerSpec);
     });
 
-    console.log('📚 Documentação Swagger disponível em /api-docs');
+    // Redirecionar da rota antiga (se alguém tentar acessar)
+    app.get('/api-docs', (req, res) => {
+      res.redirect(docsPath);
+    });
+
+    console.log(`📚 Documentação Swagger disponível em ${docsPath} (protegida por autenticação)`);
   }
 }
