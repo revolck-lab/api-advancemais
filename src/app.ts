@@ -75,7 +75,7 @@ class App {
         message: 'Serviço temporariamente indisponível. O banco de dados não está conectado.',
         suggestion: 'Tente novamente mais tarde ou entre em contato com o suporte.'
       });
-      return; // Importante: apenas retornar da função, não o objeto response
+      return;
     }
     next();
   }
@@ -89,10 +89,10 @@ class App {
       contentSecurityPolicy: {
         directives: {
           defaultSrc: ["'self'"],
-          scriptSrc: ["'self'", "'unsafe-inline'", 'https://fonts.googleapis.com'],
-          styleSrc: ["'self'", "'unsafe-inline'", 'https://fonts.googleapis.com'],
+          scriptSrc: ["'self'", "'unsafe-inline'", 'https://fonts.googleapis.com', 'https://cdn.jsdelivr.net'],
+          styleSrc: ["'self'", "'unsafe-inline'", 'https://fonts.googleapis.com', 'https://cdn.jsdelivr.net'],
           imgSrc: ["'self'", 'data:'],
-          fontSrc: ["'self'", 'https://fonts.gstatic.com'],
+          fontSrc: ["'self'", 'https://fonts.gstatic.com', 'https://cdn.jsdelivr.net'],
           connectSrc: ["'self'"]
         }
       }
@@ -106,7 +106,8 @@ class App {
     }));
 
     // Autenticação para rotas da documentação Swagger
-    this.app.use(AuthMiddleware);
+    // Use o middleware como uma função, não como um objeto
+    this.app.use((req, res, next) => AuthMiddleware(req, res, next));
     
     // Compressão para melhorar performance
     this.app.use(compression());
@@ -178,7 +179,7 @@ class App {
             ...healthInfo,
             error: process.env.NODE_ENV === 'production' ? 'Database connection error' : error
           });
-          return; // Return early sem retornar o objeto response
+          return;
         }
       }
       

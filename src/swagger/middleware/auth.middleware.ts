@@ -9,12 +9,12 @@ dotenv.config();
  * - DOCS_USERNAME: nome de usuário para acessar a documentação
  * - DOCS_PASSWORD: senha para acessar a documentação
  */
-const AuthMiddleware = (req: Request, res: Response, next: NextFunction) => {
+const AuthMiddleware = (req: Request, res: Response, next: NextFunction): void => {
   // Caminho seguro para a documentação
   const DOCS_PATH_PREFIX = '/api/docs/v1';
   
   // Verifica se a rota solicitada é a documentação
-  if (req.path.startsWith(DOCS_PATH_PREFIX)) {
+  if (req.path.startsWith(DOCS_PATH_PREFIX) || req.path === '/api-docs' || req.path.includes('api-docs.json')) {
     // Obtém credenciais das variáveis de ambiente
     const expectedUsername = process.env.DOCS_USERNAME;
     const expectedPassword = process.env.DOCS_PASSWORD;
@@ -22,10 +22,11 @@ const AuthMiddleware = (req: Request, res: Response, next: NextFunction) => {
     // Verifica se as credenciais estão configuradas
     if (!expectedUsername || !expectedPassword) {
       console.error('⚠️ Credenciais para documentação não configuradas. Configure DOCS_USERNAME e DOCS_PASSWORD.');
-      return res.status(500).json({
+      res.status(500).json({
         status: 'error',
         message: 'Configuração de segurança indisponível'
       });
+      return;
     }
     
     // Extrai as credenciais do cabeçalho de autorização
@@ -34,10 +35,11 @@ const AuthMiddleware = (req: Request, res: Response, next: NextFunction) => {
     if (!authHeader || !authHeader.startsWith('Basic ')) {
       // Se não houver cabeçalho de autorização ou não for Basic Auth
       res.setHeader('WWW-Authenticate', 'Basic realm="Documentação da API AdvanceMais"');
-      return res.status(401).json({
+      res.status(401).json({
         status: 'error',
         message: 'Autenticação necessária para acessar a documentação'
       });
+      return;
     }
     
     // Decodifica as credenciais (formato: "Basic base64(username:password)")
@@ -48,10 +50,11 @@ const AuthMiddleware = (req: Request, res: Response, next: NextFunction) => {
     // Verifica se as credenciais são válidas
     if (username !== expectedUsername || password !== expectedPassword) {
       res.setHeader('WWW-Authenticate', 'Basic realm="Documentação da API AdvanceMais"');
-      return res.status(401).json({
+      res.status(401).json({
         status: 'error',
         message: 'Credenciais inválidas'
       });
+      return;
     }
   }
   
