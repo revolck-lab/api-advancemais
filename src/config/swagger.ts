@@ -22,13 +22,13 @@ export const configureSwagger = (app: Application): void => {
       info: {
         title: 'AdvanceMais API',
         version: version || '1.0.0',
-        description: 'Documentação da API do AdvanceMais, plataforma de serviços para advogados e escritórios jurídicos.',
+        description: 'Documentação da API do AdvanceMais.',
         contact: {
           name: 'Suporte AdvanceMais',
           email: 'suporte@advancemais.com.br'
         },
         license: {
-          name: 'Proprietária',
+          name: 'Proprietário',
         },
       },
       servers: [
@@ -61,8 +61,8 @@ export const configureSwagger = (app: Application): void => {
     // Caminhos para arquivos com anotações JSDoc
     apis: [
       path.join(__dirname, '../swagger/schemas/*.js'),
-      path.join(__dirname, '../api-gateway/routes/*.js'),
-      path.join(__dirname, '../api-gateway/controllers/*.js'),
+      path.join(__dirname, '../gateway/routes/*.js'),
+      path.join(__dirname, '../gateway/controllers/*.js'),
       path.join(__dirname, '../services/**/routes/*.js'),
       path.join(__dirname, '../services/**/controllers/*.js'),
     ],
