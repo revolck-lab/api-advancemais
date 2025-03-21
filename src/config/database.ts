@@ -1,17 +1,6 @@
 import { PrismaClient } from "@prisma/client";
 
 /**
- * Configurações do cliente Prisma
- */
-const prismaConfig = {
-  log:
-    process.env.NODE_ENV === "development"
-      ? ["query", "error", "warn"]
-      : ["error"],
-  errorFormat: "pretty",
-};
-
-/**
  * Classe para gerenciar a conexão do banco de dados
  */
 export class DatabaseConnection {
@@ -28,7 +17,13 @@ export class DatabaseConnection {
    * Construtor privado para implementação do padrão Singleton
    */
   private constructor() {
-    this._prisma = new PrismaClient(prismaConfig);
+    // Criar o cliente Prisma com configurações simples
+    this._prisma = new PrismaClient({
+      log:
+        process.env.NODE_ENV === "development"
+          ? ["query", "error", "warn"]
+          : ["error"],
+    });
   }
 
   /**
