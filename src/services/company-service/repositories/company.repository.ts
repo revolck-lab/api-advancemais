@@ -1,4 +1,4 @@
-import { PrismaClient, Company, Address } from "@prisma/client";
+import { PrismaClient, Company, Address, Prisma } from "@prisma/client";
 import { NotFoundError } from "@shared/errors/app-error";
 import { ErrorLogger } from "@shared/utils/error-logger";
 import { CompanyFilters, PartialAddressDTO } from "../interfaces";
@@ -31,18 +31,24 @@ export class CompanyRepository {
     addressData: Omit<Address, "id">
   ): Promise<Company> {
     try {
-      return await this.prisma.company.create({
+      // Primeiro, crie o endereço
+      const address = await this.prisma.address.create({
+        data: addressData,
+      });
+
+      // Em seguida, crie a empresa com a referência ao endereço
+      const company = await this.prisma.company.create({
         data: {
           ...companyData,
-          address: {
-            create: addressData,
-          },
+          address_id: address.id,
         },
         include: {
           address: true,
           role: true,
         },
       });
+
+      return company;
     } catch (error) {
       this.logger.logError(error as Error, `${this.CONTEXT}.createCompany`, {
         companyData: { ...companyData, password: "[REDACTED]" },
