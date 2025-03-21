@@ -1,97 +1,148 @@
 advancemais-api/
-├── src/
-│   ├── gateway/                      # API Gateway
-│   │   ├── controllers/                  # Controladores do gateway
-│   │   ├── middleware/                   # Middleware compartilhado
-│   │   │   ├── auth.middleware.ts        # Middleware de autenticação
-│   │   │   ├── error.middleware.ts       # Tratamento de erros
-│   │   │   └── validation.middleware.ts  # Validação de entrada
-│   │   ├── routes/                       # Configuração de rotas
-│   │   │   ├── index.ts                  # Exporta todas as rotas
-│   │   │   ├── auth.routes.ts            # Rotas de autenticação
-│   │   │   ├── cms.routes.ts             # Rotas do CMS
-│   │   │   └── payment.routes.ts         # Rotas de pagamento
-│   │   └── index.ts                      # Configuração do gateway
+├── src/                                # Código fonte principal
+│   ├── gateway/                        # API Gateway
+│   │   ├── controllers/                # Controladores do gateway
+│   │   │   ├── health.controller.ts    # Controlador de health check 
+│   │   │   └── index.ts                # Exportações de controladores
+│   │   ├── middleware/                 # Middleware compartilhado
+│   │   │   ├── auth.middleware.ts      # Middleware de autenticação
+│   │   │   ├── error.middleware.ts     # Tratamento de erros
+│   │   │   ├── validation.middleware.ts# Validação de entrada
+│   │   │   └── index.ts                # Exportações de middlewares
+│   │   ├── routes/                     # Configuração de rotas
+│   │   │   ├── index.ts                # Agregador de todas as rotas
+│   │   │   ├── auth.routes.ts          # Rotas de autenticação
+│   │   │   ├── cms.routes.ts           # Rotas do CMS
+│   │   │   ├── payment.routes.ts       # Rotas de pagamento
+│   │   │   └── job.routes.ts           # Rotas de vagas
+│   │   └── index.ts                    # Configuração do gateway
 │   │
-│   ├── services/                         # Microserviços da aplicação
-│   │   ├── auth-service/                 # Serviço de Autenticação
-│   │   │   ├── controllers/              # Controladores
-│   │   │   ├── models/                   # Modelos de domínio
-│   │   │   ├── routes/                   # Rotas internas
-│   │   │   ├── validators/               # Validadores
-│   │   │   └── index.ts                  # Ponto de entrada
+│   ├── services/                       # Microserviços da aplicação
+│   │   ├── auth-service/               # Serviço de Autenticação
+│   │   │   ├── controllers/            # Controladores
+│   │   │   │   ├── auth.controller.ts  # Login/Logout/etc
+│   │   │   │   └── user.controller.ts  # CRUD de usuários
+│   │   │   ├── models/                 # Modelos de domínio
+│   │   │   │   └── user.model.ts       # Model de usuário
+│   │   │   ├── repositories/           # Camada de acesso a dados
+│   │   │   │   └── user.repository.ts  # Repositório de usuários
+│   │   │   ├── services/               # Lógica de negócio
+│   │   │   │   └── auth.service.ts     # Serviço de autenticação
+│   │   │   ├── validators/             # Validadores
+│   │   │   │   └── auth.validator.ts   # Validações de auth
+│   │   │   └── index.ts                # Ponto de entrada
 │   │   │
-│   │   ├── cms-service/                  # Serviço de CMS para o site
-│   │   │   ├── controllers/              # Controladores
-│   │   │   ├── models/                   # Modelos de domínio
-│   │   │   ├── routes/                   # Rotas internas
-│   │   │   └── index.ts                  # Ponto de entrada
+│   │   ├── cms-service/                # Serviço de CMS para o site
+│   │   │   ├── controllers/            # Controladores
+│   │   │   ├── models/                 # Modelos de domínio
+│   │   │   ├── repositories/           # Camada de acesso a dados
+│   │   │   ├── services/               # Lógica de negócio
+│   │   │   └── index.ts                # Ponto de entrada
 │   │   │
-│   │   ├── user-service/                 # Serviço de Usuários
-│   │   │   ├── controllers/              # Controladores
-│   │   │   ├── models/                   # Modelos de domínio
-│   │   │   ├── routes/                   # Rotas internas
-│   │   │   └── index.ts                  # Ponto de entrada
+│   │   ├── user-service/               # Serviço de Usuários
+│   │   │   ├── controllers/            # Controladores
+│   │   │   ├── models/                 # Modelos de domínio
+│   │   │   ├── repositories/           # Camada de acesso a dados
+│   │   │   ├── services/               # Lógica de negócio
+│   │   │   └── index.ts                # Ponto de entrada
 │   │   │
-│   │   ├── payment-service/              # Serviço de Pagamentos
-│   │   │   ├── controllers/              # Controladores
-│   │   │   ├── models/                   # Modelos de domínio
-│   │   │   ├── routes/                   # Rotas internas
-│   │   │   ├── mercadopago/              # Integração com Mercado Pago
-│   │   │   └── index.ts                  # Ponto de entrada
+│   │   ├── payment-service/            # Serviço de Pagamentos
+│   │   │   ├── controllers/            # Controladores
+│   │   │   ├── models/                 # Modelos de domínio
+│   │   │   ├── repositories/           # Camada de acesso a dados
+│   │   │   ├── services/               # Lógica de negócio
+│   │   │   ├── mercadopago/            # Integração com Mercado Pago
+│   │   │   └── index.ts                # Ponto de entrada
 │   │   │
-│   │   └── notification-service/         # Serviço de Notificações
-│   │       ├── controllers/              # Controladores
-│   │       ├── models/                   # Modelos de domínio
-│   │       ├── routes/                   # Rotas internas
-│   │       ├── email-templates/          # Templates de email
-│   │       └── index.ts                  # Ponto de entrada
+│   │   └── notification-service/       # Serviço de Notificações
+│   │       ├── controllers/            # Controladores
+│   │       ├── models/                 # Modelos de domínio
+│   │       ├── repositories/           # Camada de acesso a dados
+│   │       ├── services/               # Lógica de negócio
+│   │       ├── email-templates/        # Templates de email
+│   │       └── index.ts                # Ponto de entrada
 │   │
-│   ├── shared/                           # Código compartilhado
-│   │   ├── config/                       # Configurações globais
-│   │   │   ├── database.ts               # Configuração do banco
-│   │   │   ├── env/                      # Variáveis de ambiente
-│   │   │   │   └── .env.example          # Exemplo de variáveis
-│   │   │   ├── mercadopago.ts            # Configuração Mercado Pago
-│   │   │   └── mail.ts                   # Configuração SMTP
+│   ├── shared/                         # Código compartilhado
+│   │   ├── config/                     # Configurações globais
+│   │   │   ├── database.ts             # Configuração do banco
+│   │   │   ├── server.ts               # Configuração do servidor
+│   │   │   ├── env/                    # Variáveis de ambiente
+│   │   │   │   └── .env.example        # Exemplo de variáveis
+│   │   │   ├── mercadopago.ts          # Configuração Mercado Pago
+│   │   │   └── mail.ts                 # Configuração SMTP
 │   │   │
-│   │   ├── interfaces/                   # Interfaces compartilhadas
-│   │   │   ├── request.interface.ts      # Interfaces de requisição
-│   │   │   └── response.interface.ts     # Interfaces de resposta
+│   │   ├── interfaces/                 # Interfaces compartilhadas
+│   │   │   ├── request.interface.ts    # Interfaces de requisição
+│   │   │   └── response.interface.ts   # Interfaces de resposta
 │   │   │
-│   │   ├── types/                        # Tipos compartilhados
-│   │   │   └── roles.types.ts            # Definição de roles
+│   │   ├── types/                      # Tipos compartilhados
+│   │   │   └── roles.types.ts          # Definição de roles
 │   │   │
-│   │   ├── utils/                        # Utilitários
-│   │   │   ├── logger.ts                 # Serviço de log
-│   │   │   ├── validators.ts             # Validadores comuns
-│   │   │   └── helpers.ts                # Funções auxiliares
+│   │   ├── utils/                      # Utilitários
+│   │   │   ├── logger.ts               # Serviço de log
+│   │   │   ├── validators.ts           # Validadores comuns
+│   │   │   ├── jwt.utils.ts            # Utilitários JWT
+│   │   │   └── helpers.ts              # Funções auxiliares
 │   │   │
-│   │   └── events/                       # Sistema de eventos
-│   │       ├── index.ts                  # Configuração do barramento
-│   │       ├── publishers.ts             # Publicadores de eventos
-│   │       └── subscribers.ts            # Assinantes de eventos
+│   │   └── events/                     # Sistema de eventos
+│   │       ├── index.ts                # Configuração do barramento
+│   │       ├── publishers.ts           # Publicadores de eventos
+│   │       └── subscribers.ts          # Assinantes de eventos
 │   │
-│   ├── public/                           # Arquivos públicos
-│   │   └── docs/                         # Documentação pública
+│   ├── public/                         # Arquivos públicos
+│   │   └── docs/                       # Documentação pública
+│   │       ├── swagger-custom.css      # CSS do Swagger
+│   │       └── logo.svg                # Logo da API
 │   │
-│   ├── swagger/                          # Configuração do Swagger
-│   │   ├── schemas/                      # Schemas da documentação
-│   │   └── index.ts                      # Configuração principal
+│   ├── swagger/                        # Configuração do Swagger
+│   │   ├── schemas/                    # Schemas da documentação
+│   │   │   ├── auth.schema.ts          # Schemas de autenticação
+│   │   │   ├── user.schema.ts          # Schemas de usuário
+│   │   │   ├── payment.schema.ts       # Schemas de pagamento
+│   │   │   └── job.schema.ts           # Schemas de vagas
+│   │   └── index.ts                    # Configuração principal
 │   │
-│   ├── app.ts                            # Configuração da aplicação
-│   └── server.ts                         # Inicialização do servidor
+│   ├── app.ts                          # Configuração da aplicação
+│   └── server.ts                       # Inicialização do servidor
 │
-├── prisma/                               # Modelos e migrações Prisma
-│   ├── schema.prisma                     # Schema do banco de dados
-│   └── migrations/                       # Migrações geradas
+├── prisma/                             # Modelos e migrações Prisma
+│   ├── schema.prisma                   # Schema do banco de dados
+│   ├── seed.ts                         # Dados iniciais
+│   └── migrations/                     # Migrações geradas
 │
-├── tests/                                # Testes
-│   ├── unit/                             # Testes unitários
-│   ├── integration/                      # Testes de integração
-│   └── e2e/                              # Testes end-to-end
+├── public/                             # Arquivos estáticos públicos
+│   ├── index.html                      # Página de status
+│   └── docs/                           # Documentação pública
+│       ├── swagger-custom.css          # Estilos do Swagger
+│       └── logo.svg                    # Logo da empresa
 │
-├── .env.example                          # Exemplo de variáveis de ambiente
-├── .gitignore                            # Arquivos ignorados pelo git
-├── package.json                          # Dependências e scripts
-└── README.md                             # Documentação principal
+├── tests/                              # Testes
+│   ├── unit/                           # Testes unitários
+│   │   ├── services/                   # Testes de serviços
+│   │   └── utils/                      # Testes de utilitários
+│   ├── integration/                    # Testes de integração
+│   │   ├── auth/                       # Testes de autenticação
+│   │   └── payment/                    # Testes de pagamento
+│   └── e2e/                            # Testes end-to-end
+│
+├── scripts/                            # Scripts utilitários
+│   ├── db-check.ts                     # Verificação do banco
+│   └── generate-keys.ts                # Geração de chaves JWT
+│
+├── .github/                            # Configurações do GitHub
+│   └── workflows/                      # Workflows do GitHub Actions
+│       └── release.yml                 # CI/CD de release
+│
+├── .vscode/                            # Configurações do VS Code
+│   ├── launch.json                     # Configuração de debug
+│   └── settings.json                   # Configurações do editor
+│
+├── .env.example                        # Exemplo de variáveis de ambiente
+├── .gitignore                          # Arquivos ignorados pelo git
+├── .gitattributes                      # Configurações do git
+├── .releaserc                          # Configuração do semantic-release
+├── nodemon.json                        # Configuração do Nodemon
+├── render.yaml                         # Configuração para deploy no Render
+├── package.json                        # Dependências e scripts
+├── tsconfig.json                       # Configuração do TypeScript
+└── README.md                           # Documentação principal
