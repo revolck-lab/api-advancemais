@@ -13,8 +13,8 @@ datasource db {
 // Role model (perfis de usuários no sistema)
 model Role {
   id         Int       @id @default(autoincrement())
-  name       String    @db.VarChar(255)
-  level      Int
+  name       String    @db.VarChar(255) // Professor, Aluno, Empresa, Administrador, etc.
+  level      Int       // Nível hierárquico (1-8 conforme especificação)
   status     Int       @default(1)
   created_at DateTime  @default(now()) @db.Timestamp()
   updated_at DateTime  @updatedAt @db.Timestamp()
@@ -65,7 +65,7 @@ model Address {
   @@map("address")
 }
 
-// User model (usuários)
+// User model (usuários - pessoas físicas, incluindo alunos e professores)
 model User {
   id           Int       @id @default(autoincrement())
   name         String    @db.VarChar(255)
@@ -85,11 +85,20 @@ model User {
   updated_at   DateTime  @updatedAt @db.Timestamp()
   
   // Relacionamentos
-  gender     Gender    @relation(fields: [gender_id], references: [id])
-  education  Education @relation(fields: [education_id], references: [id])
-  role       Role      @relation(fields: [role_id], references: [id])
-  address    Address   @relation(fields: [address_id], references: [id])
+  gender          Gender          @relation(fields: [gender_id], references: [id])
+  education       Education       @relation(fields: [education_id], references: [id])
+  role            Role            @relation(fields: [role_id], references: [id])
+  address         Address         @relation(fields: [address_id], references: [id])
   
+  // Relacionamentos de pagamentos
+  payments        Payment[]
+  
+  // Relacionamentos específicos para o AVA
+  enrollments     Enrollment[]      // Matrículas em cursos
+  teachingModules ModuleTeacher[]   // Módulos que o professor ensina
+  examAttempts    ExamAttempt[]     // Tentativas de exames/provas
+  examGrades      ExamGrade[]       // Notas de exames/provas
+
   @@index([gender_id])
   @@index([education_id])
   @@index([role_id])
@@ -97,29 +106,32 @@ model User {
   @@map("user")
 }
 
-// Company model (empresas)
+// Company model (empresas - pessoas jurídicas)
 model Company {
-  id             Int      @id @default(autoincrement())
-  cnpj           String   @unique @db.Char(14)
-  trade_name     String   @db.VarChar(255)
-  business_name  String   @db.VarChar(255)
-  contact_name   String   @db.VarChar(255)
+  id             Int           @id @default(autoincrement())
+  cnpj           String        @unique @db.Char(14)
+  trade_name     String        @db.VarChar(255)
+  business_name  String        @db.VarChar(255)
+  contact_name   String        @db.VarChar(255)
   address_id     Int
-  whatsapp       String   @db.Char(11)
-  mobile_phone   String   @db.Char(11)
-  landline_phone String?  @db.Char(11)
-  email          String   @unique @db.VarChar(255)
-  password       String   @db.VarChar(255)
-  status         Int      @default(1) @db.TinyInt
+  whatsapp       String        @db.Char(11)
+  mobile_phone   String        @db.Char(11)
+  landline_phone String?       @db.Char(11)
+  email          String        @unique @db.VarChar(255)
+  password       String        @db.VarChar(255)
+  status         Int           @default(1) @db.TinyInt
   role_id        Int
-  avatar_url     String?  @db.VarChar(255)
-  created_at     DateTime @default(now()) @db.Timestamp()
-  updated_at     DateTime @updatedAt @db.Timestamp()
+  avatar_url     String?       @db.VarChar(255)
+  created_at     DateTime      @default(now()) @db.Timestamp()
+  updated_at     DateTime      @updatedAt @db.Timestamp()
   
   // Relacionamentos
-  address    Address   @relation(fields: [address_id], references: [id])
-  role       Role      @relation(fields: [role_id], references: [id])
+  address      Address        @relation(fields: [address_id], references: [id])
+  role         Role           @relation(fields: [role_id], references: [id])
   
+  // Relacionamentos de assinaturas
+  subscriptions CompanySubscription[]
+
   @@index([cnpj])
   @@index([address_id])
   @@index([email])
@@ -127,24 +139,22 @@ model Company {
   @@map("company")
 }
 
-
-===
-
-
-// Payment model (pagamentos)
+// Payment model (pagamentos únicos - apenas para usuários)
 model Payment {
   id             String    @id @default(uuid())
   user_id        Int
-  amount         Float     @db.Decimal(10, 2)
+  amount         Decimal     @db.Decimal(10, 2)
   currency       String    @db.VarChar(3)
   description    String    @db.VarChar(255)
   status         String    @db.VarChar(20)
   payment_method String    @db.VarChar(50)
   payment_type   String    @db.VarChar(20)
   external_id    String?   @unique @db.VarChar(100)
-  metadata       String?   @db.Text // JSON serializado
-  created_at     DateTime  @default(now()) @db.Timestamp()
-  updated_at     DateTime  @updatedAt @db.Timestamp()
+  item_type      String?   @db.VarChar(50)  // Tipo do item (ex: "course", "ebook", etc)
+  item_id        String?   @db.VarChar(100) // ID do item relacionado
+  metadata       String?   @db.Text         // JSON serializado
+  created_at     DateTime  @default(now())  @db.Timestamp()
+  updated_at     DateTime  @updatedAt       @db.Timestamp()
   
   // Relacionamentos
   user           User      @relation(fields: [user_id], references: [id])
@@ -156,11 +166,36 @@ model Payment {
   @@map("payment")
 }
 
-// Subscription model (assinaturas)
-model Subscription {
+// Modelo para planos de assinatura
+model SubscriptionPlan {
   id                String    @id @default(uuid())
-  user_id           Int
-  plan_id           String    @db.VarChar(100)
+  external_id       String?   @unique @db.VarChar(100)
+  name              String    @db.VarChar(100)
+  description       String    @db.VarChar(255)
+  amount            Decimal     @db.Decimal(10, 2)
+  currency_id       String    @db.VarChar(3)
+  payment_type_id   String    @db.VarChar(20)
+  frequency         Int       @default(1)
+  frequency_type    String    @db.VarChar(10)
+  status            String    @db.VarChar(20)
+  auto_recurring    Boolean   @default(true)
+  features          String?   @db.Text // JSON serializado
+  created_at        DateTime  @default(now()) @db.Timestamp()
+  updated_at        DateTime  @updatedAt @db.Timestamp()
+  
+  // Relacionamentos
+  companySubscriptions CompanySubscription[]
+
+  @@index([status])
+  @@index([name])
+  @@map("subscription_plan")
+}
+
+// Modelo para assinaturas de empresas
+model CompanySubscription {
+  id                String    @id @default(uuid())
+  company_id        Int
+  plan_id           String    
   status            String    @db.VarChar(20)
   start_date        DateTime  @db.Timestamp()
   end_date          DateTime? @db.Timestamp()
@@ -175,33 +210,338 @@ model Subscription {
   updated_at        DateTime  @updatedAt @db.Timestamp()
   
   // Relacionamentos
-  user              User      @relation(fields: [user_id], references: [id])
+  company           Company         @relation(fields: [company_id], references: [id])
+  plan              SubscriptionPlan @relation(fields: [plan_id], references: [id])
   
-  @@index([user_id])
-  @@index([status])
+  @@index([company_id])
   @@index([plan_id])
+  @@index([status])
   @@index([created_at])
-  @@map("subscription")
+  @@map("company_subscription")
 }
 
-// SubscriptionPlan model (planos de assinatura)
-model SubscriptionPlan {
-  id                String    @id @default(uuid())
-  external_id       String?   @unique @db.VarChar(100)
-  name              String    @db.VarChar(100)
-  description       String    @db.VarChar(255)
-  amount            Float     @db.Decimal(10, 2)
-  currency_id       String    @db.VarChar(3)
-  payment_type_id   String    @db.VarChar(20)
-  frequency         Int       @default(1)
-  frequency_type    String    @db.VarChar(10)
-  status            String    @db.VarChar(20)
-  auto_recurring    Boolean   @default(true)
-  features          String?   @db.Text // JSON serializado
+// ==================== ESTRUTURA DE CURSOS (AVA) ====================
+
+// Categorias de cursos (ONLINE, LIVE, PRESENCIAL, HÍBRIDO)
+model CourseCategory {
+  id          Int       @id @default(autoincrement())
+  name        String    @db.VarChar(100)
+  description String?   @db.Text
+  status      Int       @default(1) @db.TinyInt
+  created_at  DateTime  @default(now()) @db.Timestamp()
+  updated_at  DateTime  @updatedAt @db.Timestamp()
+  
+  // Relacionamentos
+  courses     Course[]
+  
+  @@map("course_category")
+}
+
+// Tipos de cursos (GRATUITO, PAGO)
+model CourseType {
+  id          Int       @id @default(autoincrement())
+  name        String    @db.VarChar(100)
+  description String?   @db.Text
+  status      Int       @default(1) @db.TinyInt
+  created_at  DateTime  @default(now()) @db.Timestamp()
+  updated_at  DateTime  @updatedAt @db.Timestamp()
+  
+  // Relacionamentos
+  courses     Course[]
+  
+  @@map("course_type")
+}
+
+// Modelo principal de cursos
+model Course {
+  id                    String    @id @default(uuid())
+  name                  String    @db.VarChar(255)
+  description           String?   @db.Text
+  code                  String    @unique @db.VarChar(10) // Código único (ex: UD3820)
+  enrollment_start_date DateTime? @db.Timestamp() // Data de início das matrículas
+  enrollment_end_date   DateTime? @db.Timestamp() // Data de fim das matrículas
+  course_start_date     DateTime  @db.Timestamp() // Data de início do curso
+  course_end_date       DateTime? @db.Timestamp() // Data de fim do curso
+  banner_vertical_url   String?   @db.VarChar(255) // URL do banner vertical
+  banner_horizontal_url String?   @db.VarChar(255) // URL do banner horizontal
+  category_id           Int       // Categoria (ONLINE, LIVE, PRESENCIAL, HÍBRIDO)
+  course_type_id        Int       // Tipo (GRATUITO, PAGO)
+  price                 Decimal?    @db.Decimal(10, 2) // Preço (se for pago)
+  max_students          Int?      // Máximo de alunos permitidos
+  status                Int       @default(0) @db.TinyInt // Status (0=despublicado, 1=publicado)
+  created_by            Int       // ID do usuário que criou (administrador)
+  created_at            DateTime  @default(now()) @db.Timestamp()
+  updated_at            DateTime  @updatedAt @db.Timestamp()
+  
+  // Relacionamentos
+  category              CourseCategory    @relation(fields: [category_id], references: [id])
+  courseType            CourseType        @relation(fields: [course_type_id], references: [id])
+  modules               Module[]          // Módulos do curso
+  enrollments           Enrollment[]      // Matrículas no curso
+  exams                 Exam[]            // Provas do curso (finais)
+  liveSessions          LiveSession[]     // Sessões ao vivo (para cursos LIVE)
+  
+  @@index([category_id])
+  @@index([course_type_id])
+  @@index([status])
+  @@index([created_by])
+  @@map("course")
+}
+
+// Módulos do curso
+model Module {
+  id                Int       @id @default(autoincrement())
+  course_id         String
+  name              String    @db.VarChar(255)
+  description       String?   @db.Text
+  order_number      Int       // Ordem do módulo no curso
+  completion_deadline DateTime? @db.Timestamp() // Prazo para conclusão
+  is_mandatory      Boolean   @default(true) // Se o módulo é obrigatório
+  min_grade         Float?    @db.Float // Nota mínima para aprovação (se aplicável)
+  status            Int       @default(1) @db.TinyInt
   created_at        DateTime  @default(now()) @db.Timestamp()
   updated_at        DateTime  @updatedAt @db.Timestamp()
   
+  // Relacionamentos
+  course            Course           @relation(fields: [course_id], references: [id])
+  lessons           Lesson[]         // Aulas do módulo
+  documents         Document[]       // Documentos do módulo
+  exams             Exam[]           // Provas do módulo
+  teachers          ModuleTeacher[]  // Professores do módulo
+  
+  @@index([course_id])
   @@index([status])
-  @@index([name])
-  @@map("subscription_plan")
+  @@map("module")
+}
+
+// Relação de professores com módulos
+model ModuleTeacher {
+  id          Int       @id @default(autoincrement())
+  module_id   Int
+  teacher_id  Int       // ID do usuário com role de professor
+  is_main     Boolean   @default(false) // Se é o professor principal
+  created_at  DateTime  @default(now()) @db.Timestamp()
+  updated_at  DateTime  @updatedAt @db.Timestamp()
+  
+  // Relacionamentos
+  module      Module    @relation(fields: [module_id], references: [id])
+  teacher     User      @relation(fields: [teacher_id], references: [id])
+  
+  @@unique([module_id, teacher_id]) // Um professor só pode estar uma vez em cada módulo
+  @@index([module_id])
+  @@index([teacher_id])
+  @@map("module_teacher")
+}
+
+// Tipos de aulas (VIDEO, TEXT, QUIZ, ASSIGNMENT, etc.)
+model LessonType {
+  id          Int       @id @default(autoincrement())
+  name        String    @db.VarChar(100)
+  description String?   @db.Text
+  status      Int       @default(1) @db.TinyInt
+  created_at  DateTime  @default(now()) @db.Timestamp()
+  updated_at  DateTime  @updatedAt @db.Timestamp()
+  
+  // Relacionamentos
+  lessons     Lesson[]
+  
+  @@map("lesson_type")
+}
+
+// Aulas dentro dos módulos
+model Lesson {
+  id           Int       @id @default(autoincrement())
+  module_id    Int
+  lesson_type_id Int
+  title        String    @db.VarChar(255)
+  description  String?   @db.Text
+  content      String?   @db.LongText  // Conteúdo da aula (pode ser HTML, URL de vídeo, etc.)
+  duration     Int?      // Duração em minutos (se aplicável)
+  order_number Int       // Ordem da aula no módulo
+  is_mandatory Boolean   @default(true)
+  status       Int       @default(1) @db.TinyInt
+  created_at   DateTime  @default(now()) @db.Timestamp()
+  updated_at   DateTime  @updatedAt @db.Timestamp()
+  
+  // Relacionamentos
+  module       Module     @relation(fields: [module_id], references: [id])
+  lessonType   LessonType @relation(fields: [lesson_type_id], references: [id])
+  
+  @@index([module_id])
+  @@index([lesson_type_id])
+  @@index([status])
+  @@map("lesson")
+}
+
+// Documentos (materiais de apoio, PDFs, etc.)
+model Document {
+  id           Int       @id @default(autoincrement())
+  module_id    Int
+  title        String    @db.VarChar(255)
+  description  String?   @db.Text
+  file_url     String    @db.VarChar(255)
+  file_type    String    @db.VarChar(50)  // MIME type ou extensão do arquivo
+  is_mandatory Boolean   @default(false)
+  order_number Int?      // Ordem opcional no módulo
+  status       Int       @default(1) @db.TinyInt
+  created_at   DateTime  @default(now()) @db.Timestamp()
+  updated_at   DateTime  @updatedAt @db.Timestamp()
+  
+  // Relacionamentos
+  module       Module    @relation(fields: [module_id], references: [id])
+  
+  @@index([module_id])
+  @@index([status])
+  @@map("document")
+}
+
+// Provas/Exames (podem estar relacionados a módulos ou ao curso completo)
+model Exam {
+  id              Int       @id @default(autoincrement())
+  course_id       String?   // Pode ser null se for prova de módulo
+  module_id       Int?      // Pode ser null se for prova final do curso
+  title           String    @db.VarChar(255)
+  description     String?   @db.Text
+  time_limit_minutes Int    // Tempo limite em minutos
+  passing_grade   Float     @db.Float // Nota para aprovação (ex: 7.0)
+  is_mandatory    Boolean   @default(true)
+  status          Int       @default(1) @db.TinyInt
+  start_date      DateTime? @db.Timestamp() // Data de início disponível
+  end_date        DateTime? @db.Timestamp() // Data final disponível
+  created_at      DateTime  @default(now()) @db.Timestamp()
+  updated_at      DateTime  @updatedAt @db.Timestamp()
+  
+  // Relacionamentos
+  course          Course?    @relation(fields: [course_id], references: [id])
+  module          Module?    @relation(fields: [module_id], references: [id])
+  questions       Question[] // Questões da prova
+  examAttempts    ExamAttempt[] // Tentativas dos alunos
+  examGrades      ExamGrade[]   // Notas dos alunos
+  
+  @@index([course_id])
+  @@index([module_id])
+  @@index([status])
+  @@map("exam")
+}
+
+// Questões das provas
+model Question {
+  id           Int       @id @default(autoincrement())
+  exam_id      Int
+  question_text String   @db.Text
+  question_type String   @db.VarChar(50) // MULTIPLE_CHOICE, ESSAY, TRUE_FALSE, etc.
+  points       Float     @db.Float // Valor da questão
+  order_number Int       // Ordem na prova
+  created_at   DateTime  @default(now()) @db.Timestamp()
+  updated_at   DateTime  @updatedAt @db.Timestamp()
+  
+  // Relacionamentos
+  exam         Exam       @relation(fields: [exam_id], references: [id])
+  options      Option[]   // Opções para questões de múltipla escolha
+  
+  @@index([exam_id])
+  @@map("question")
+}
+
+// Opções para questões de múltipla escolha
+model Option {
+  id           Int       @id @default(autoincrement())
+  question_id  Int
+  option_text  String    @db.Text
+  is_correct   Boolean   @default(false)
+  order_number Int       // Ordem na questão
+  created_at   DateTime  @default(now()) @db.Timestamp()
+  updated_at   DateTime  @updatedAt @db.Timestamp()
+  
+  // Relacionamentos
+  question     Question  @relation(fields: [question_id], references: [id])
+  
+  @@index([question_id])
+  @@map("option")
+}
+
+// Tentativas de prova dos alunos
+model ExamAttempt {
+  id           String    @id @default(uuid())
+  exam_id      Int
+  student_id   Int
+  start_time   DateTime  @db.Timestamp()
+  end_time     DateTime? @db.Timestamp()
+  status       String    @db.VarChar(50) // STARTED, COMPLETED, TIMED_OUT
+  created_at   DateTime  @default(now()) @db.Timestamp()
+  updated_at   DateTime  @updatedAt @db.Timestamp()
+  
+  // Relacionamentos
+  exam         Exam      @relation(fields: [exam_id], references: [id])
+  student      User      @relation(fields: [student_id], references: [id])
+  
+  @@index([exam_id])
+  @@index([student_id])
+  @@map("exam_attempt")
+}
+
+// Notas das provas
+model ExamGrade {
+  id           String    @id @default(uuid())
+  exam_id      Int
+  student_id   Int
+  grade        Float     @db.Float
+  passed       Boolean
+  feedback     String?   @db.Text
+  graded_by    Int?      // ID do professor/admin que corrigiu
+  created_at   DateTime  @default(now()) @db.Timestamp()
+  updated_at   DateTime  @updatedAt @db.Timestamp()
+  
+  // Relacionamentos
+  exam         Exam      @relation(fields: [exam_id], references: [id])
+  student      User      @relation(fields: [student_id], references: [id])
+  
+  @@unique([exam_id, student_id]) // Um aluno só pode ter uma nota por prova
+  @@index([exam_id])
+  @@index([student_id])
+  @@map("exam_grade")
+}
+
+// Matrículas dos alunos nos cursos
+model Enrollment {
+  id           String    @id @default(uuid())
+  course_id    String
+  student_id   Int
+  status       String    @db.VarChar(50) // ACTIVE, COMPLETED, CANCELLED, FAILED
+  progress     Float     @default(0) @db.Float // Progresso em percentual (0-100)
+  enrollment_date DateTime @db.Timestamp()
+  completion_date DateTime? @db.Timestamp()
+  certificate_url String? @db.VarChar(255) // URL do certificado (quando concluído)
+  created_at   DateTime  @default(now()) @db.Timestamp()
+  updated_at   DateTime  @updatedAt @db.Timestamp()
+  
+  // Relacionamentos
+  course       Course    @relation(fields: [course_id], references: [id])
+  student      User      @relation(fields: [student_id], references: [id])
+  
+  @@unique([course_id, student_id]) // Um aluno só pode estar matriculado uma vez por curso
+  @@index([course_id])
+  @@index([student_id])
+  @@index([status])
+  @@map("enrollment")
+}
+
+// Sessões ao vivo (para cursos do tipo LIVE)
+model LiveSession {
+  id           String    @id @default(uuid())
+  course_id    String
+  title        String    @db.VarChar(255)
+  description  String?   @db.Text
+  start_time   DateTime  @db.Timestamp()
+  end_time     DateTime  @db.Timestamp()
+  meeting_url  String?   @db.VarChar(255) // URL do Google Meet
+  recording_url String?  @db.VarChar(255) // URL da gravação (após a sessão)
+  created_at   DateTime  @default(now()) @db.Timestamp()
+  updated_at   DateTime  @updatedAt @db.Timestamp()
+  
+  // Relacionamentos
+  course       Course    @relation(fields: [course_id], references: [id])
+  
+  @@index([course_id])
+  @@map("live_session")
 }
