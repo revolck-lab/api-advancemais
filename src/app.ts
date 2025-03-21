@@ -1,11 +1,11 @@
 // src/app.ts
-import express, { Application } from 'express';
-import { PrismaClient } from '@prisma/client';
-import { configureMiddlewares } from './config/middleware';
-import { configureSwagger } from './config/swagger';
-import { configureRoutes } from './gateway/routes';
-import { errorHandler } from './shared/middleware/error.middleware';
-import { databaseConnectionMiddleware } from './shared/middleware/database.middleware';
+import express, { Application } from "express";
+import { PrismaClient } from "@prisma/client";
+import { configureMiddlewares } from "./config/middleware";
+import { configureSwagger } from "./config/swagger";
+import { configureRoutes } from "./gateway/routes";
+import { errorHandler } from "./shared/middleware/error.middleware";
+import { databaseConnectionMiddleware } from "./shared/middleware/database.middleware";
 
 /**
  * Classe App para configuração da aplicação Express
@@ -23,10 +23,13 @@ class App {
   private constructor() {
     this.app = express();
     this.prisma = new PrismaClient({
-      log: process.env.NODE_ENV === 'development' ? ['query', 'error', 'warn'] : ['error'],
-      errorFormat: 'pretty',
+      log:
+        process.env.NODE_ENV === "development"
+          ? ["query", "error", "warn"]
+          : ["error"],
+      errorFormat: "pretty",
     });
-    
+
     this.initializeApplication();
   }
 
@@ -36,16 +39,16 @@ class App {
   private initializeApplication(): void {
     // Inicializa middlewares básicos
     configureMiddlewares(this.app);
-    
+
     // Configura o middleware de verificação de banco de dados
     this.app.use(databaseConnectionMiddleware(this));
-    
+
     // Configura Swagger para documentação
     configureSwagger(this.app);
-    
-    // Configura as rotas da API
-    configureRoutes(this.app);
-    
+
+    // Configura as rotas da API - passa a instância do App para evitar importação cíclica
+    configureRoutes(this.app, this);
+
     // Configura tratamento de erros (deve ser o último middleware)
     this.app.use(errorHandler);
   }

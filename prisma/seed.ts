@@ -166,6 +166,258 @@ async function main() {
     });
   }
 
+  // ==================== PLANOS DE ASSINATURA ====================
+  console.log("Criando planos de assinatura...");
+
+  const subscriptionPlans = [
+    {
+      name: "Inicial",
+      description: "Comece a recrutar com eficiência",
+      amount: 49.99,
+      currency_id: "BRL",
+      payment_type_id: "credit_card",
+      frequency: 1,
+      frequency_type: "months",
+      status: "active",
+      auto_recurring: true,
+      active_jobs_limit: 3,
+      is_featured: false,
+      featured_jobs: 0,
+      has_advanced_dashboard: false,
+      plan_level: 1,
+      features: JSON.stringify([
+        "3 vagas ativas",
+        "30 dias de divulgação",
+        "Acesso a candidatos qualificados",
+        "Painel de controle básico",
+      ]),
+    },
+    {
+      name: "Intermediário",
+      description: "Amplie seu alcance de recrutamento",
+      amount: 74.99,
+      currency_id: "BRL",
+      payment_type_id: "credit_card",
+      frequency: 1,
+      frequency_type: "months",
+      status: "active",
+      auto_recurring: true,
+      active_jobs_limit: 10,
+      is_featured: false,
+      featured_jobs: 0,
+      has_advanced_dashboard: false,
+      plan_level: 2,
+      features: JSON.stringify([
+        "10 vagas ativas",
+        "30 dias de divulgação",
+        "Acesso a candidatos qualificados",
+        "Painel de controle básico",
+      ]),
+    },
+    {
+      name: "Avançado",
+      description: "Solução completa para grandes equipes",
+      amount: 99.99,
+      currency_id: "BRL",
+      payment_type_id: "credit_card",
+      frequency: 1,
+      frequency_type: "months",
+      status: "active",
+      auto_recurring: true,
+      active_jobs_limit: 20,
+      is_featured: true,
+      featured_jobs: 0,
+      has_advanced_dashboard: false,
+      plan_level: 3,
+      features: JSON.stringify([
+        "20 vagas ativas",
+        "30 dias de divulgação",
+        "Acesso a candidatos qualificados",
+        "Painel de controle básico",
+      ]),
+    },
+    {
+      name: "Destaque",
+      description: "Recrutamento sem limites",
+      amount: 199.99,
+      currency_id: "BRL",
+      payment_type_id: "credit_card",
+      frequency: 1,
+      frequency_type: "months",
+      status: "active",
+      auto_recurring: true,
+      active_jobs_limit: 999, // Praticamente ilimitado
+      is_featured: true,
+      featured_jobs: 1,
+      has_advanced_dashboard: true,
+      plan_level: 4,
+      features: JSON.stringify([
+        "Vagas ilimitadas",
+        "30 dias de divulgação",
+        "Acesso a candidatos qualificados",
+        "Painel de controle avançado",
+        "1 vaga em destaque",
+      ]),
+    },
+  ];
+
+  for (const plan of subscriptionPlans) {
+    await prisma.subscriptionPlan.upsert({
+      where: { name: plan.name },
+      update: {},
+      create: plan,
+    });
+  }
+
+  // ==================== TIPOS DE CONTRATO ====================
+  console.log("Criando tipos de contrato...");
+
+  const contractTypes = [
+    {
+      name: "CLT",
+      description:
+        "Contrato sob o regime CLT (Consolidação das Leis do Trabalho)",
+      status: "active",
+    },
+    {
+      name: "PJ",
+      description: "Contrato como Pessoa Jurídica",
+      status: "active",
+    },
+    {
+      name: "Estágio",
+      description: "Contrato de estágio para estudantes",
+      status: "active",
+    },
+    {
+      name: "Trainee",
+      description: "Programa de trainee para recém-formados",
+      status: "active",
+    },
+    {
+      name: "Temporário",
+      description: "Contrato por tempo determinado",
+      status: "active",
+    },
+    {
+      name: "Autônomo",
+      description: "Prestação de serviços como profissional autônomo",
+      status: "active",
+    },
+  ];
+
+  for (const contractType of contractTypes) {
+    await prisma.contractType.upsert({
+      where: { name: contractType.name },
+      update: {},
+      create: contractType,
+    });
+  }
+
+  // ==================== MODELOS DE TRABALHO ====================
+  console.log("Criando modelos de trabalho...");
+
+  const workModels = [
+    {
+      name: "Presencial",
+      description: "Trabalho realizado exclusivamente no local da empresa",
+      status: "active",
+    },
+    {
+      name: "Remoto",
+      description: "Trabalho realizado totalmente à distância",
+      status: "active",
+    },
+    {
+      name: "Híbrido",
+      description: "Combinação de trabalho presencial e remoto",
+      status: "active",
+    },
+    {
+      name: "Flexível",
+      description: "Horários flexíveis de acordo com a necessidade",
+      status: "active",
+    },
+  ];
+
+  for (const workModel of workModels) {
+    await prisma.workModel.upsert({
+      where: { name: workModel.name },
+      update: {},
+      create: workModel,
+    });
+  }
+
+  // ==================== CATEGORIAS DE VAGAS ====================
+  console.log("Criando categorias de vagas...");
+
+  const jobCategories = [
+    {
+      name: "Direito Civil",
+      description: "Vagas relacionadas à área de Direito Civil",
+      status: "active",
+    },
+    {
+      name: "Direito Trabalhista",
+      description: "Vagas relacionadas à área de Direito Trabalhista",
+      status: "active",
+    },
+    {
+      name: "Direito Tributário",
+      description: "Vagas relacionadas à área de Direito Tributário",
+      status: "active",
+    },
+    {
+      name: "Direito Penal",
+      description: "Vagas relacionadas à área de Direito Penal",
+      status: "active",
+    },
+    {
+      name: "Direito Empresarial",
+      description: "Vagas relacionadas à área de Direito Empresarial",
+      status: "active",
+    },
+    {
+      name: "Direito Ambiental",
+      description: "Vagas relacionadas à área de Direito Ambiental",
+      status: "active",
+    },
+    {
+      name: "Direito Internacional",
+      description: "Vagas relacionadas à área de Direito Internacional",
+      status: "active",
+    },
+    {
+      name: "Direito Digital",
+      description: "Vagas relacionadas à área de Direito Digital e Tecnologia",
+      status: "active",
+    },
+    {
+      name: "Direito Previdenciário",
+      description: "Vagas relacionadas à área de Direito Previdenciário",
+      status: "active",
+    },
+    {
+      name: "Gestão Jurídica",
+      description: "Vagas para gestão de departamentos jurídicos",
+      status: "active",
+    },
+    {
+      name: "Administrativo Jurídico",
+      description:
+        "Vagas para funções administrativas em escritórios e departamentos jurídicos",
+      status: "active",
+    },
+  ];
+
+  for (const jobCategory of jobCategories) {
+    await prisma.jobCategory.upsert({
+      where: { name: jobCategory.name },
+      update: {},
+      create: jobCategory,
+    });
+  }
+
   // ==================== USUÁRIO ADMINISTRADOR PADRÃO ====================
   console.log("Criando usuário administrador padrão...");
 
@@ -183,8 +435,10 @@ async function main() {
   }
 
   // Criar endereço para o admin
-  const adminAddress = await prisma.address.create({
-    data: {
+  const adminAddress = await prisma.address.upsert({
+    where: { id: 1 },
+    update: {},
+    create: {
       address: "Rua Exemplo",
       city: "São Paulo",
       state: "SP",
@@ -211,6 +465,127 @@ async function main() {
       role_id: adminRole.id,
       address_id: adminAddress.id,
       status: 1,
+    },
+  });
+
+  // ==================== USUÁRIO RECRUTADOR PADRÃO ====================
+  console.log("Criando usuário recrutador padrão...");
+
+  // Buscar role de recrutador
+  const recruiterRole = await prisma.role.findUnique({
+    where: { name: "Recrutadores" },
+  });
+
+  if (!recruiterRole) {
+    throw new Error("Role de recrutador não encontrada");
+  }
+
+  // Criar endereço para o recrutador
+  const recruiterAddress = await prisma.address.upsert({
+    where: { id: 2 },
+    update: {},
+    create: {
+      address: "Rua dos Recrutadores",
+      city: "São Paulo",
+      state: "SP",
+      cep: "01001000",
+      number: 456,
+    },
+  });
+
+  // Criar usuário recrutador
+  const recruiterPassword = await hash("Recruiter@123", 10);
+  await prisma.user.upsert({
+    where: { email: "recrutador@advancemais.com" },
+    update: {},
+    create: {
+      name: "Recrutador Sistema",
+      email: "recrutador@advancemais.com",
+      password: recruiterPassword,
+      birth_date: new Date("1992-05-15"),
+      cpf: "98765432100",
+      phone_user: "11988888888",
+      gender_id: gender.id,
+      education_id: education.id,
+      code_user: "REC001",
+      role_id: recruiterRole.id,
+      address_id: recruiterAddress.id,
+      status: 1,
+    },
+  });
+
+  // ==================== EMPRESA DEMONSTRAÇÃO ====================
+  console.log("Criando empresa de demonstração...");
+
+  // Buscar role de empresa
+  const companyRole = await prisma.role.findUnique({
+    where: { name: "Empresa" },
+  });
+
+  if (!companyRole) {
+    throw new Error("Role de empresa não encontrada");
+  }
+
+  // Criar endereço para a empresa demo
+  const companyAddress = await prisma.address.upsert({
+    where: { id: 3 },
+    update: {},
+    create: {
+      address: "Avenida Paulista",
+      city: "São Paulo",
+      state: "SP",
+      cep: "01310100",
+      number: 1000,
+    },
+  });
+
+  // Criar empresa demo
+  const companyPassword = await hash("Company@123", 10);
+  const companyDemo = await prisma.company.upsert({
+    where: { email: "demo@advancemais.com" },
+    update: {},
+    create: {
+      cnpj: "12345678000190",
+      trade_name: "Advogados Associados Demo",
+      business_name: "Sociedade de Advogados Demo LTDA",
+      contact_name: "João Demonstração",
+      address_id: companyAddress.id,
+      whatsapp: "11977777777",
+      mobile_phone: "11977777777",
+      landline_phone: "1130303030",
+      email: "demo@advancemais.com",
+      password: companyPassword,
+      role_id: companyRole.id,
+      status: 1,
+    },
+  });
+
+  // Buscar plano inicial
+  const initialPlan = await prisma.subscriptionPlan.findFirst({
+    where: { name: "Inicial" },
+  });
+
+  if (!initialPlan) {
+    throw new Error("Plano inicial não encontrado");
+  }
+
+  // Criar assinatura ativa para a empresa demo
+  await prisma.companySubscription.upsert({
+    where: { id: "demo-subscription" },
+    update: {},
+    create: {
+      id: "demo-subscription",
+      company_id: companyDemo.id,
+      plan_id: initialPlan.id,
+      status: "active",
+      start_date: new Date(),
+      end_date: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000), // 30 dias a partir de hoje
+      next_payment_date: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000),
+      payment_method_id: "credit_card",
+      frequency: "monthly",
+      frequency_type: "months",
+      auto_recurring: true,
+      external_id: "demo-external-id",
     },
   });
 

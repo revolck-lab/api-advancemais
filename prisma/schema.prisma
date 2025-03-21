@@ -98,6 +98,11 @@ model User {
   teachingModules ModuleTeacher[]   // Módulos que o professor ensina
   examAttempts    ExamAttempt[]     // Tentativas de exames/provas
   examGrades      ExamGrade[]       // Notas de exames/provas
+  
+  // Relacionamentos para vagas e currículos
+  resumeProfile   ResumeProfile?    // Perfil de currículo (alunos)
+  jobApplications JobApplication[]  // Candidaturas a vagas
+  jobFavorites    JobFavorite[]     // Vagas favoritadas
 
   @@index([gender_id])
   @@index([education_id])
@@ -131,6 +136,9 @@ model Company {
   
   // Relacionamentos de assinaturas
   subscriptions CompanySubscription[]
+  
+  // Relacionamentos para vagas
+  jobs         Job[]          // Vagas publicadas pela empresa
 
   @@index([cnpj])
   @@index([address_id])
@@ -143,7 +151,7 @@ model Company {
 model Payment {
   id             String    @id @default(uuid())
   user_id        Int
-  amount         Decimal     @db.Decimal(10, 2)
+  amount         Decimal   @db.Decimal(10, 2)
   currency       String    @db.VarChar(3)
   description    String    @db.VarChar(255)
   status         String    @db.VarChar(20)
@@ -172,14 +180,22 @@ model SubscriptionPlan {
   external_id       String?   @unique @db.VarChar(100)
   name              String    @db.VarChar(100)
   description       String    @db.VarChar(255)
-  amount            Decimal     @db.Decimal(10, 2)
+  amount            Decimal   @db.Decimal(10, 2)
   currency_id       String    @db.VarChar(3)
   payment_type_id   String    @db.VarChar(20)
   frequency         Int       @default(1)
   frequency_type    String    @db.VarChar(10)
   status            String    @db.VarChar(20)
   auto_recurring    Boolean   @default(true)
-  features          String?   @db.Text // JSON serializado
+  
+  // Novos campos para recursos específicos de planos
+  active_jobs_limit Int       @default(3) // Número de vagas ativas permitidas
+  is_featured       Boolean   @default(false) // Plano destaque
+  featured_jobs     Int       @default(0) // Quantidade de vagas em destaque permitidas
+  has_advanced_dashboard Boolean @default(false) // Acesso ao painel avançado
+  plan_level        Int       @default(1) // Nível do plano (1-Inicial, 2-Intermediário, 3-Avançado, 4-Destaque)
+  
+  features          String?   @db.Text // JSON serializado com recursos adicionais
   created_at        DateTime  @default(now()) @db.Timestamp()
   updated_at        DateTime  @updatedAt @db.Timestamp()
   
@@ -205,6 +221,13 @@ model CompanySubscription {
   frequency_type    String    @db.VarChar(10)
   auto_recurring    Boolean   @default(true)
   external_id       String?   @unique @db.VarChar(100)
+  
+  // Campos para isenção de pagamento
+  is_exempted       Boolean   @default(false) // Empresa isenta de pagamento?
+  exemption_reason  String?   @db.Text // Motivo da isenção
+  exempted_by       Int?      // Usuário que concedeu a isenção
+  exemption_date    DateTime? @db.Timestamp() // Data da isenção
+  
   metadata          String?   @db.Text // JSON serializado
   created_at        DateTime  @default(now()) @db.Timestamp()
   updated_at        DateTime  @updatedAt @db.Timestamp()
@@ -212,6 +235,7 @@ model CompanySubscription {
   // Relacionamentos
   company           Company         @relation(fields: [company_id], references: [id])
   plan              SubscriptionPlan @relation(fields: [plan_id], references: [id])
+  jobs              Job[]           // Vagas relacionadas a esta assinatura
   
   @@index([company_id])
   @@index([plan_id])
@@ -266,7 +290,7 @@ model Course {
   banner_horizontal_url String?   @db.VarChar(255) // URL do banner horizontal
   category_id           Int       // Categoria (ONLINE, LIVE, PRESENCIAL, HÍBRIDO)
   course_type_id        Int       // Tipo (GRATUITO, PAGO)
-  price                 Decimal?    @db.Decimal(10, 2) // Preço (se for pago)
+  price                 Decimal?  @db.Decimal(10, 2) // Preço (se for pago)
   max_students          Int?      // Máximo de alunos permitidos
   status                Int       @default(0) @db.TinyInt // Status (0=despublicado, 1=publicado)
   created_by            Int       // ID do usuário que criou (administrador)
@@ -544,4 +568,276 @@ model LiveSession {
   
   @@index([course_id])
   @@map("live_session")
+}
+
+// ==================== ESTRUTURA DE VAGAS DE EMPREGO ====================
+
+// Tipos de contrato para vagas
+model ContractType {
+  id          Int       @id @default(autoincrement())
+  name        String    @db.VarChar(100) // CLT, PJ, Estágio, etc.
+  description String?   @db.Text
+  status      String    @db.VarChar(20) @default("active") // active, inactive
+  created_at  DateTime  @default(now()) @db.Timestamp()
+  updated_at  DateTime  @updatedAt @db.Timestamp()
+  
+  // Relacionamentos
+  jobs        Job[]     // Vagas com este tipo de contrato
+  
+  @@map("contract_type")
+}
+
+// Modelos de trabalho
+model WorkModel {
+  id          Int       @id @default(autoincrement())
+  name        String    @db.VarChar(100) // Presencial, Remoto, Híbrido, etc.
+  description String?   @db.Text
+  status      String    @db.VarChar(20) @default("active") // active, inactive
+  created_at  DateTime  @default(now()) @db.Timestamp()
+  updated_at  DateTime  @updatedAt @db.Timestamp()
+  
+  // Relacionamentos
+  jobs        Job[]     // Vagas com este modelo de trabalho
+  
+  @@map("work_model")
+}
+
+// Áreas de atuação/Categorias de vagas
+model JobCategory {
+  id          Int       @id @default(autoincrement())
+  name        String    @db.VarChar(100) // Direito Civil, Trabalhista, etc.
+  description String?   @db.Text
+  status      String    @db.VarChar(20) @default("active") // active, inactive
+  created_at  DateTime  @default(now()) @db.Timestamp()
+  updated_at  DateTime  @updatedAt @db.Timestamp()
+  
+  // Relacionamentos
+  jobs        Job[]     // Vagas nesta categoria
+  
+  @@map("job_category")
+}
+
+// Modelo principal de vagas
+model Job {
+  id                    String    @id @default(uuid())
+  company_id            Int       // Empresa que criou a vaga
+  subscription_id       String    // Assinatura relacionada à vaga
+  title                 String    @db.VarChar(255) // Título da vaga
+  description           String    @db.Text // Descrição detalhada
+  requirements          String?   @db.Text // Requisitos específicos
+  benefits              String?   @db.Text // Benefícios oferecidos
+  contract_type_id      Int       // Tipo de contrato
+  work_model_id         Int       // Modelo de trabalho
+  category_id           Int       // Categoria/Área de atuação
+  city                  String    @db.VarChar(100) // Cidade
+  state                 String    @db.VarChar(2) // Estado (sigla)
+  salary_range_min      Decimal?  @db.Decimal(10, 2) // Faixa salarial mínima
+  salary_range_max      Decimal?  @db.Decimal(10, 2) // Faixa salarial máxima
+  is_salary_hidden      Boolean   @default(false) // Ocultar salário
+  is_pcd_accepted       Boolean   @default(false) // Aceita pessoas com deficiência
+  is_private            Boolean   @default(false) // Vaga privada (empresa não divulgada)
+  is_featured           Boolean   @default(false) // Vaga em destaque
+  status                String    @db.VarChar(20) @default("pending_review") // Status da vaga
+  publication_date      DateTime? @db.Timestamp() // Data da publicação (após aprovação)
+  expiration_date       DateTime? @db.Timestamp() // Data de expiração (fim da divulgação)
+  created_at            DateTime  @default(now()) @db.Timestamp()
+  updated_at            DateTime  @updatedAt @db.Timestamp()
+  
+  // Relacionamentos
+  company               Company   @relation(fields: [company_id], references: [id])
+  subscription          CompanySubscription @relation(fields: [subscription_id], references: [id])
+  contractType          ContractType @relation(fields: [contract_type_id], references: [id])
+  workModel             WorkModel @relation(fields: [work_model_id], references: [id])
+  category              JobCategory @relation(fields: [category_id], references: [id])
+  applications          JobApplication[] // Candidaturas
+  favorites             JobFavorite[] // Favoritados
+  statusHistory         JobStatusHistory[] // Histórico de status
+  
+  @@index([company_id])
+  @@index([subscription_id])
+  @@index([contract_type_id])
+  @@index([work_model_id])
+  @@index([category_id])
+  @@index([status])
+  @@index([publication_date])
+  @@index([expiration_date])
+  @@map("job")
+}
+
+// Histórico de status das vagas
+model JobStatusHistory {
+  id          String    @id @default(uuid())
+  job_id      String
+  status      String    @db.VarChar(20) // pending_review, approved, rejected, published, expired, draft
+  comments    String?   @db.Text // Comentários/feedback sobre a mudança de status
+  changed_by  Int       // ID do usuário que alterou o status
+  created_at  DateTime  @default(now()) @db.Timestamp()
+  
+  // Relacionamentos
+  job         Job       @relation(fields: [job_id], references: [id])
+  
+  @@index([job_id])
+  @@index([status])
+  @@map("job_status_history")
+}
+
+// Modelo de currículo estendido para alunos
+model ResumeProfile {
+  id                Int       @id @default(autoincrement())
+  user_id           Int       @unique // ID do aluno (usuário)
+  professional_title String   @db.VarChar(255) // Título profissional
+  summary           String?   @db.Text // Resumo/objetivo profissional
+  skills            String?   @db.Text // Habilidades (JSON)
+  linkedin_url      String?   @db.VarChar(255) // Perfil LinkedIn
+  github_url        String?   @db.VarChar(255) // Perfil GitHub
+  portfolio_url     String?   @db.VarChar(255) // URL do portfólio
+  additional_info   String?   @db.Text // Informações adicionais
+  is_public         Boolean   @default(true) // Visível para recrutadores
+  created_at        DateTime  @default(now()) @db.Timestamp()
+  updated_at        DateTime  @updatedAt @db.Timestamp()
+  
+  // Relacionamentos
+  user              User      @relation(fields: [user_id], references: [id])
+  experiences       WorkExperience[] // Experiências profissionais
+  education         EducationHistory[] // Formação educacional
+  certifications    Certification[] // Certificações
+  languages         LanguageSkill[] // Habilidades em idiomas
+  applications      JobApplication[] // Candidaturas a vagas
+  
+  @@map("resume_profile")
+}
+
+// Experiências profissionais
+model WorkExperience {
+  id               Int       @id @default(autoincrement())
+  resume_id        Int       // ID do perfil de currículo
+  company_name     String    @db.VarChar(255) // Nome da empresa
+  job_title        String    @db.VarChar(255) // Cargo
+  start_date       DateTime  @db.Date() // Data de início
+  end_date         DateTime? @db.Date() // Data de término (null = atual)
+  is_current       Boolean   @default(false) // Emprego atual
+  description      String?   @db.Text // Descrição das atividades
+  created_at       DateTime  @default(now()) @db.Timestamp()
+  updated_at       DateTime  @updatedAt @db.Timestamp()
+  
+  // Relacionamentos
+  resumeProfile    ResumeProfile @relation(fields: [resume_id], references: [id], onDelete: Cascade)
+  
+  @@index([resume_id])
+  @@map("work_experience")
+}
+
+// Formação educacional
+model EducationHistory {
+  id               Int       @id @default(autoincrement())
+  resume_id        Int       // ID do perfil de currículo
+  institution      String    @db.VarChar(255) // Instituição de ensino
+  degree           String    @db.VarChar(255) // Grau/Título
+  field_of_study   String    @db.VarChar(255) // Área de estudo
+  start_date       DateTime  @db.Date() // Data de início
+  end_date         DateTime? @db.Date() // Data de conclusão (null = em andamento)
+  is_current       Boolean   @default(false) // Em andamento
+  description      String?   @db.Text // Descrição adicional
+  created_at       DateTime  @default(now()) @db.Timestamp()
+  updated_at       DateTime  @updatedAt @db.Timestamp()
+  
+  // Relacionamentos
+  resumeProfile    ResumeProfile @relation(fields: [resume_id], references: [id], onDelete: Cascade)
+  
+  @@index([resume_id])
+  @@map("education_history")
+}
+
+// Certificações
+model Certification {
+  id               Int       @id @default(autoincrement())
+  resume_id        Int       // ID do perfil de currículo
+  name             String    @db.VarChar(255) // Nome da certificação
+  organization     String    @db.VarChar(255) // Organização emissora
+  issue_date       DateTime? @db.Date() // Data de emissão
+  expiration_date  DateTime? @db.Date() // Data de expiração
+  credential_id    String?   @db.VarChar(255) // ID da credencial
+  credential_url   String?   @db.VarChar(255) // URL da credencial
+  created_at       DateTime  @default(now()) @db.Timestamp()
+  updated_at       DateTime  @updatedAt @db.Timestamp()
+  
+  // Relacionamentos
+  resumeProfile    ResumeProfile @relation(fields: [resume_id], references: [id], onDelete: Cascade)
+  
+  @@index([resume_id])
+  @@map("certification")
+}
+
+// Habilidades em idiomas
+model LanguageSkill {
+  id               Int       @id @default(autoincrement())
+  resume_id        Int       // ID do perfil de currículo
+  language         String    @db.VarChar(100) // Idioma
+  proficiency_level String   @db.VarChar(50) // Nível de proficiência (básico, intermediário, avançado, fluente)
+  created_at       DateTime  @default(now()) @db.Timestamp()
+  updated_at       DateTime  @updatedAt @db.Timestamp()
+  
+  // Relacionamentos
+  resumeProfile    ResumeProfile @relation(fields: [resume_id], references: [id], onDelete: Cascade)
+  
+  @@index([resume_id])
+  @@map("language_skill")
+}
+
+// Candidaturas a vagas
+model JobApplication {
+  id               String    @id @default(uuid())
+  job_id           String    // ID da vaga
+  user_id          Int       // ID do usuário/aluno
+  resume_id        Int       // ID do perfil de currículo
+  status           String    @db.VarChar(50) @default("pending") // pending, viewed, in_process, approved, rejected
+  cover_letter     String?   @db.Text // Carta de apresentação
+  applied_at       DateTime  @default(now()) @db.Timestamp() // Data da candidatura
+  updated_at       DateTime  @updatedAt @db.Timestamp()
+  
+  // Relacionamentos
+  job              Job       @relation(fields: [job_id], references: [id])
+  user             User      @relation(fields: [user_id], references: [id])
+  resumeProfile    ResumeProfile @relation(fields: [resume_id], references: [id])
+  history          ApplicationStatusHistory[] // Histórico de status da candidatura
+  
+  @@unique([job_id, user_id]) // Um usuário só pode se candidatar uma vez em cada vaga
+  @@index([job_id])
+  @@index([user_id])
+  @@index([resume_id])
+  @@index([status])
+  @@map("job_application")
+}
+
+// Histórico de status das candidaturas
+model ApplicationStatusHistory {
+  id               String    @id @default(uuid())
+  application_id   String    // ID da candidatura
+  status           String    @db.VarChar(50) // pending, viewed, in_process, approved, rejected
+  comments         String?   @db.Text // Comentários/feedback
+  changed_by       Int       // ID do usuário que alterou o status
+  created_at       DateTime  @default(now()) @db.Timestamp()
+  
+  // Relacionamentos
+  application      JobApplication @relation(fields: [application_id], references: [id])
+  
+  @@index([application_id])
+  @@map("application_status_history")
+}
+
+// Vagas favoritadas pelos alunos
+model JobFavorite {
+  id               String    @id @default(uuid())
+  job_id           String    // ID da vaga
+  user_id          Int       // ID do usuário/aluno
+  created_at       DateTime  @default(now()) @db.Timestamp()
+  
+  // Relacionamentos
+  job              Job       @relation(fields: [job_id], references: [id])
+  user             User      @relation(fields: [user_id], references: [id])
+  
+  @@unique([job_id, user_id]) // Um usuário só pode favoritar uma vaga uma vez
+  @@index([job_id])
+  @@index([user_id])
+  @@map("job_favorite")
 }
