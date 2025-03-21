@@ -1,4 +1,3 @@
-// src/app.ts
 import express, { Application } from "express";
 import { PrismaClient } from "@prisma/client";
 import { configureMiddlewares } from "./config/middleware";

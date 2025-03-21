@@ -1,27 +1,46 @@
+/**
+ * Configuração das rotas principais da API
+ * Centraliza e organiza todas as rotas dos diferentes serviços
+ */
+
 import { Router } from "express";
 import authRoutes from "./auth.routes";
 import paymentRoutes from "./payment.routes";
 import companyRoutes from "./company.routes";
 import jobRoutes from "./job.routes";
+import { SystemController } from "../controllers";
 
 /**
- * Configuração das rotas principais da API
+ * Inicializa e configura as rotas da API
+ * @param appInstance Instância da aplicação
+ * @returns Router configurado com todas as rotas
  */
-const router = Router();
+export const initApiRoutes = (appInstance: any): Router => {
+  const router = Router();
 
-// Rota de versão da API
-router.get("/version", (req, res) => {
-  res.status(200).json({
-    status: "success",
-    version: process.env.npm_package_version || "1.0.0",
-    environment: process.env.NODE_ENV || "development",
-  });
-});
+  // Inicializa controladores
+  const systemController = new SystemController(appInstance);
 
-// Configurar as rotas de serviços
-router.use("/auth", authRoutes);
-router.use("/payments", paymentRoutes);
-router.use("/companies", companyRoutes);
-router.use("/jobs", jobRoutes);
+  /**
+   * @swagger
+   * /api/v1/version:
+   *   get:
+   *     summary: Retorna informações de versão da API
+   *     tags: [Sistema]
+   *     description: Obtém a versão atual da API e o ambiente de execução
+   *     responses:
+   *       200:
+   *         description: Informações de versão retornadas com sucesso
+   */
+  router.get("/version", systemController.getVersion);
 
-export default router;
+  // Configura as rotas de serviços
+  router.use("/auth", authRoutes);
+  router.use("/payments", paymentRoutes);
+  router.use("/companies", companyRoutes);
+  router.use("/jobs", jobRoutes);
+
+  return router;
+};
+
+export default initApiRoutes;

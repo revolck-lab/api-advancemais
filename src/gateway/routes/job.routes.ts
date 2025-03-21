@@ -1,12 +1,17 @@
-import { Router } from "express";
-import { initJobService } from "@services/job-service";
-
 /**
  * Configuração de rotas para o serviço de vagas no API Gateway
+ * Encaminha requisições para o microserviço de vagas
+ */
+
+import { Router } from "express";
+import { initJobService } from "@/services/job-service";
+
+/**
+ * Rotas de vagas no gateway
  */
 const jobRoutes = Router();
 
-// Integrar o serviço de vagas
+// Integra o serviço de vagas
 jobRoutes.use("/", initJobService());
 
 export default jobRoutes;
