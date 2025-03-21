@@ -1,6 +1,9 @@
+// src/services/company-service/routes/company.routes.ts
+
 import { Router } from "express";
 import { PrismaClient } from "@prisma/client";
 import { CompanyController } from "../controllers/company.controller";
+import authMiddleware from "@shared/middleware/auth.middleware";
 import app from "@/app";
 
 /**
@@ -117,6 +120,8 @@ companyRoutes.post("/", companyController.createCompany);
 companyRoutes.get(
   "/",
   app.requireDatabaseConnection,
+  authMiddleware.authenticate,
+  authMiddleware.accessLevel(4), // Apenas administradores
   companyController.getCompanies
 );
 
@@ -149,6 +154,7 @@ companyRoutes.get(
 companyRoutes.get(
   "/:id",
   app.requireDatabaseConnection,
+  authMiddleware.authenticate,
   companyController.getCompanyById
 );
 
@@ -189,6 +195,7 @@ companyRoutes.get(
 companyRoutes.put(
   "/:id",
   app.requireDatabaseConnection,
+  authMiddleware.authenticate,
   companyController.updateCompany
 );
 
@@ -234,7 +241,40 @@ companyRoutes.put(
 companyRoutes.patch(
   "/:id/status",
   app.requireDatabaseConnection,
+  authMiddleware.authenticate,
+  authMiddleware.accessLevel(4), // Apenas administradores
   companyController.updateCompanyStatus
+);
+
+/**
+ * @swagger
+ * /api/companies/{id}/subscription/check:
+ *   get:
+ *     summary: Verifica se uma empresa possui assinatura ativa
+ *     tags: [Empresas]
+ *     description: Verifica se a empresa possui uma assinatura válida
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema:
+ *           type: integer
+ *         description: ID da empresa
+ *     responses:
+ *       200:
+ *         description: Verificação realizada com sucesso
+ *       401:
+ *         description: Não autorizado
+ *       404:
+ *         description: Empresa não encontrada
+ */
+companyRoutes.get(
+  "/:id/subscription/check",
+  app.requireDatabaseConnection,
+  authMiddleware.authenticate,
+  companyController.checkSubscription
 );
 
 export default companyRoutes;
