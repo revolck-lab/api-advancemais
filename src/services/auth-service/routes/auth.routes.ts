@@ -1,13 +1,11 @@
-/**
- * Rotas de autenticação
- */
-
 import { Router } from "express";
-import { PrismaClient } from "@prisma/client";
 import { AuthController } from "../controllers/auth.controller";
 import authMiddleware from "@shared/middleware/auth.middleware";
 import app from "@/app";
 
+/**
+ * Rotas para o serviço de autenticação
+ */
 const authRoutes = Router();
 const prisma = app.prisma;
 const authController = new AuthController(prisma);
@@ -39,23 +37,6 @@ const authController = new AuthController(prisma);
  *     responses:
  *       200:
  *         description: Login realizado com sucesso
- *         content:
- *           application/json:
- *             schema:
- *               type: object
- *               properties:
- *                 status:
- *                   type: string
- *                   example: success
- *                 data:
- *                   type: object
- *                   properties:
- *                     user:
- *                       type: object
- *                     token:
- *                       type: string
- *                     expiresIn:
- *                       type: integer
  *       400:
  *         description: Dados inválidos
  *       401:
@@ -114,6 +95,8 @@ authRoutes.post("/login", app.requireDatabaseConnection, authController.login);
  *         description: Usuário criado com sucesso
  *       400:
  *         description: Dados inválidos
+ *       409:
+ *         description: Conflito - usuário já existe
  *       500:
  *         description: Erro interno do servidor
  */
@@ -173,6 +156,8 @@ authRoutes.post(
  *         description: Empresa criada com sucesso
  *       400:
  *         description: Dados inválidos
+ *       409:
+ *         description: Conflito - empresa já existe
  *       500:
  *         description: Erro interno do servidor
  */
@@ -241,6 +226,8 @@ authRoutes.post(
  *         description: Não autorizado
  *       403:
  *         description: Acesso negado
+ *       409:
+ *         description: Conflito - usuário já existe
  *       500:
  *         description: Erro interno do servidor
  */

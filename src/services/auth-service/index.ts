@@ -1,8 +1,3 @@
-/**
- * Serviço de Autenticação
- * Gerencia autenticação, autorização e gerenciamento de usuários
- */
-
 import { Router } from "express";
 import authRoutes from "./routes/auth.routes";
 
@@ -20,5 +15,10 @@ export const initAuthService = (): Router => {
 
   return router;
 };
+
+export { AuthService } from "./services/auth.service";
+export { AuthController } from "./controllers/auth.controller";
+export { UserRepository } from "./repositories/user.repository";
+export { TokenUtils } from "./utils/token.utils";
 
 export default initAuthService;
