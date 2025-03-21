@@ -1,7 +1,8 @@
 import { Router } from "express";
+import authRoutes from "./auth.routes";
 import paymentRoutes from "./payment.routes";
-import companyRoutes from "./company.routes"; // Nova importação
-import jobRoutes from "./job.routes"; // Nova importação
+import companyRoutes from "./company.routes";
+import jobRoutes from "./job.routes";
 
 /**
  * Configuração das rotas principais da API
@@ -18,8 +19,9 @@ router.get("/version", (req, res) => {
 });
 
 // Configurar as rotas de serviços
+router.use("/auth", authRoutes);
 router.use("/payments", paymentRoutes);
-router.use("/companies", companyRoutes); // Novo: rotas para empresas
-router.use("/jobs", jobRoutes); // Novo: rotas para vagas
+router.use("/companies", companyRoutes);
+router.use("/jobs", jobRoutes);
 
 export default router;
