@@ -10,7 +10,7 @@ import {
 } from "../interfaces/company.interface";
 import { CompanyRepository } from "../repositories/company.repository";
 import { CompanyValidation } from "../validations/company.validation";
-import { NotFoundError, ConflictError } from "@shared/errors/app-error";
+import { ConflictError } from "@shared/errors/app-error";
 import { ErrorLogger } from "@shared/utils/error-logger";
 
 /**
@@ -35,9 +35,11 @@ export class CompanyService {
   /**
    * Cria uma nova empresa
    * @param companyData Dados para criação da empresa
-   * @returns Empresa criada
+   * @returns Empresa criada com os relacionamentos e sem a senha
    */
-  async createCompany(companyData: CreateCompanyDTO): Promise<any> {
+  async createCompany(
+    companyData: CreateCompanyDTO
+  ): Promise<Omit<Company, "password">> {
     try {
       // Validar dados de entrada
       const validatedData = CompanyValidation.validateCreate(companyData);
@@ -67,7 +69,7 @@ export class CompanyService {
       // Separar os dados da empresa e do endereço
       const { address, ...companyInfo } = validatedData;
 
-      // Pegar o ID do role de empresa (padrão é 3)
+      // O ID do role de empresa (padrão é 3)
       const roleId = 3;
 
       // Criar a empresa com seu endereço
@@ -88,7 +90,8 @@ export class CompanyService {
         `Empresa criada com sucesso: ID ${company.id}`,
         this.CONTEXT
       );
-      return companyWithoutPassword;
+
+      return companyWithoutPassword as Omit<Company, "password">;
     } catch (error) {
       this.logger.logError(error as Error, `${this.CONTEXT}.createCompany`, {
         companyData: { ...companyData, password: "[REDACTED]" },
@@ -100,19 +103,16 @@ export class CompanyService {
   /**
    * Busca uma empresa pelo ID
    * @param id ID da empresa
-   * @returns Empresa encontrada
+   * @returns Empresa encontrada com seus relacionamentos e sem a senha
    */
-  async getCompanyById(id: number): Promise<any> {
+  async getCompanyById(id: number): Promise<Omit<Company, "password">> {
     try {
-      const company = await this.companyRepository.findById(id);
-
-      if (!company) {
-        throw new NotFoundError(`Empresa com ID ${id} não encontrada`);
-      }
+      const company = await this.companyRepository.findById(id, true);
 
       // Remover a senha do resultado
       const { password, ...companyWithoutPassword } = company;
-      return companyWithoutPassword;
+
+      return companyWithoutPassword as Omit<Company, "password">;
     } catch (error) {
       this.logger.logError(error as Error, `${this.CONTEXT}.getCompanyById`, {
         id,
@@ -137,14 +137,15 @@ export class CompanyService {
 
       // Converter para o formato esperado pela interface Company
       // Garantimos que cada objeto tem a estrutura esperada com a propriedade address
-      const companies = prismaCompanies.map((prismaCompany: any) => {
+      const companies = prismaCompanies.map((prismaCompany) => {
+        // Remover a senha do resultado
         const { password, ...restCompany } = prismaCompany;
 
         // Criamos um objeto que corresponde à interface Company
-        const company: Company = {
+        const company = {
           ...restCompany,
           address: prismaCompany.address,
-        };
+        } as Omit<Company, "password">;
 
         return company;
       });
@@ -155,7 +156,7 @@ export class CompanyService {
       const totalPages = Math.ceil(total / limit);
 
       return {
-        companies,
+        companies: companies as any[], // Cast necessário devido à estrutura da interface
         total,
         page,
         limit,
@@ -173,18 +174,18 @@ export class CompanyService {
    * Atualiza os dados de uma empresa
    * @param id ID da empresa
    * @param updateData Dados para atualização
-   * @returns Empresa atualizada
+   * @returns Empresa atualizada com seus relacionamentos e sem a senha
    */
-  async updateCompany(id: number, updateData: UpdateCompanyDTO): Promise<any> {
+  async updateCompany(
+    id: number,
+    updateData: UpdateCompanyDTO
+  ): Promise<Omit<Company, "password">> {
     try {
       // Validar dados de entrada
       const validatedData = CompanyValidation.validateUpdate(updateData);
 
       // Verificar se a empresa existe
-      const company = await this.companyRepository.findById(id);
-      if (!company) {
-        throw new NotFoundError(`Empresa com ID ${id} não encontrada`);
-      }
+      const company = await this.companyRepository.findById(id, true);
 
       // Verificar se o email está sendo alterado e já está em uso
       if (validatedData.email && validatedData.email !== company.email) {
@@ -211,11 +212,7 @@ export class CompanyService {
       }
 
       // Buscar a empresa atualizada com todos os relacionamentos
-      const refreshedCompany = await this.companyRepository.findById(id);
-
-      if (!refreshedCompany) {
-        throw new NotFoundError(`Erro ao buscar empresa atualizada`);
-      }
+      const refreshedCompany = await this.companyRepository.findById(id, true);
 
       // Remover a senha do resultado
       const { password, ...companyWithoutPassword } = refreshedCompany;
@@ -224,7 +221,8 @@ export class CompanyService {
         `Empresa atualizada com sucesso: ID ${id}`,
         this.CONTEXT
       );
-      return companyWithoutPassword;
+
+      return companyWithoutPassword as Omit<Company, "password">;
     } catch (error) {
       this.logger.logError(error as Error, `${this.CONTEXT}.updateCompany`, {
         id,
@@ -238,27 +236,24 @@ export class CompanyService {
    * Atualiza o status de uma empresa
    * @param id ID da empresa
    * @param statusData Dados do novo status
-   * @returns Empresa atualizada
+   * @returns Empresa atualizada com seus relacionamentos e sem a senha
    */
   async updateCompanyStatus(
     id: number,
     statusData: UpdateCompanyStatusDTO
-  ): Promise<any> {
+  ): Promise<Omit<Company, "password">> {
     try {
       // Validar dados de entrada
       const validatedData = CompanyValidation.validateStatusUpdate(statusData);
 
       // Verificar se a empresa existe
-      const company = await this.companyRepository.findById(id);
-      if (!company) {
-        throw new NotFoundError(`Empresa com ID ${id} não encontrada`);
-      }
+      const company = await this.companyRepository.findById(id, true);
 
       // Se o status não mudou, não faz nada
       if (company.status === validatedData.status) {
         // Remover a senha do resultado
         const { password, ...companyWithoutPassword } = company;
-        return companyWithoutPassword;
+        return companyWithoutPassword as Omit<Company, "password">;
       }
 
       // Atualizar o status
@@ -272,7 +267,8 @@ export class CompanyService {
 
       const statusText = validatedData.status === 1 ? "ativada" : "desativada";
       this.logger.logInfo(`Empresa ${statusText}: ID ${id}`, this.CONTEXT);
-      return companyWithoutPassword;
+
+      return companyWithoutPassword as Omit<Company, "password">;
     } catch (error) {
       this.logger.logError(
         error as Error,
@@ -294,10 +290,7 @@ export class CompanyService {
   async hasActiveSubscription(companyId: number): Promise<boolean> {
     try {
       // Verificar se a empresa existe
-      const company = await this.companyRepository.findById(companyId);
-      if (!company) {
-        throw new NotFoundError(`Empresa com ID ${companyId} não encontrada`);
-      }
+      const company = await this.companyRepository.findById(companyId, true);
 
       return this.companyRepository.hasActiveSubscription(companyId);
     } catch (error) {

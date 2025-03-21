@@ -1,6 +1,4 @@
-// src/shared/utils/error-logger.ts
-
-import { AppError } from "@shared/errors/app-error";
+import { AppError } from "../errors/app-error";
 
 // Tipos de log suportados
 export enum LogLevel {

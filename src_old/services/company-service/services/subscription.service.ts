@@ -6,6 +6,8 @@ import {
   SubscriptionFilters,
   SubscriptionListResult,
   SubscriptionStatus,
+  Subscription,
+  SubscriptionPlan,
 } from "../interfaces/subscription.interface";
 import { SubscriptionRepository } from "../repositories/subscription.repository";
 import { CompanyRepository } from "../repositories/company.repository";
@@ -39,7 +41,7 @@ export class SubscriptionService {
    */
   async createSubscription(
     subscriptionData: CreateCompanySubscriptionDTO
-  ): Promise<any> {
+  ): Promise<Subscription> {
     try {
       // Validar dados de entrada
       const validatedData =
@@ -47,13 +49,9 @@ export class SubscriptionService {
 
       // Verificar se a empresa existe
       const company = await this.companyRepository.findById(
-        validatedData.company_id
+        validatedData.company_id,
+        true
       );
-      if (!company) {
-        throw new NotFoundError(
-          `Empresa com ID ${validatedData.company_id} não encontrada`
-        );
-      }
 
       // Verificar se a empresa já possui uma assinatura ativa
       const existingSubscription =
@@ -66,27 +64,27 @@ export class SubscriptionService {
 
       // Verificar se o plano existe
       const plan = await this.subscriptionRepository.findPlanById(
-        validatedData.plan_id
+        validatedData.plan_id,
+        true
       );
-      if (!plan) {
-        throw new NotFoundError(
-          `Plano com ID ${validatedData.plan_id} não encontrado`
-        );
-      }
 
       // Preparar dados da assinatura
       const now = new Date();
+      const nextPaymentDate = new Date(
+        now.getTime() + 30 * 24 * 60 * 60 * 1000
+      ); // 30 dias após o início
+
       const subscriptionParams = {
         id: validatedData.external_id || `sub_${Date.now()}`,
         company_id: validatedData.company_id,
         plan_id: validatedData.plan_id,
-        status: "active",
+        status: SubscriptionStatus.ACTIVE,
         start_date: now,
         end_date: null,
-        next_payment_date: new Date(now.getTime() + 30 * 24 * 60 * 60 * 1000), // 30 dias após o início
+        next_payment_date: nextPaymentDate,
         payment_method_id: validatedData.payment_method_id,
-        frequency: "monthly",
-        frequency_type: "months",
+        frequency: "monthly", // Usando string para corresponder ao schema
+        frequency_type: "months", // Usando string para corresponder ao schema
         auto_recurring: validatedData.auto_recurring || true,
         external_id: validatedData.external_id,
         is_exempted: validatedData.is_exempted || false,
@@ -104,7 +102,8 @@ export class SubscriptionService {
         `Assinatura criada: ID ${subscription.id} para empresa ${validatedData.company_id}`,
         this.CONTEXT
       );
-      return subscription;
+
+      return subscription as unknown as Subscription;
     } catch (error) {
       this.logger.logError(
         error as Error,
@@ -122,15 +121,10 @@ export class SubscriptionService {
    * @param id ID da assinatura
    * @returns Assinatura encontrada
    */
-  async getSubscriptionById(id: string): Promise<any> {
+  async getSubscriptionById(id: string): Promise<Subscription> {
     try {
-      const subscription = await this.subscriptionRepository.findById(id);
-
-      if (!subscription) {
-        throw new NotFoundError(`Assinatura com ID ${id} não encontrada`);
-      }
-
-      return subscription;
+      const subscription = await this.subscriptionRepository.findById(id, true);
+      return subscription as unknown as Subscription;
     } catch (error) {
       this.logger.logError(
         error as Error,
@@ -146,13 +140,10 @@ export class SubscriptionService {
    * @param companyId ID da empresa
    * @returns Assinatura ativa ou null
    */
-  async getActiveSubscription(companyId: number): Promise<any> {
+  async getActiveSubscription(companyId: number): Promise<Subscription> {
     try {
       // Verificar se a empresa existe
-      const company = await this.companyRepository.findById(companyId);
-      if (!company) {
-        throw new NotFoundError(`Empresa com ID ${companyId} não encontrada`);
-      }
+      const company = await this.companyRepository.findById(companyId, true);
 
       const subscription =
         await this.subscriptionRepository.findActiveByCompanyId(companyId);
@@ -163,7 +154,7 @@ export class SubscriptionService {
         );
       }
 
-      return subscription;
+      return subscription as unknown as Subscription;
     } catch (error) {
       this.logger.logError(
         error as Error,
@@ -189,8 +180,11 @@ export class SubscriptionService {
       const validatedFilters = SubscriptionValidation.validateFilters(filters);
 
       // Obter assinaturas filtradas
-      const { subscriptions, total } =
+      const { subscriptions: prismaSubscriptions, total } =
         await this.subscriptionRepository.findAll(validatedFilters);
+
+      // Convertendo para o formato esperado pela interface
+      const subscriptions = prismaSubscriptions as unknown as Subscription[];
 
       // Calcular dados de paginação
       const page = validatedFilters.page || 1;
@@ -225,16 +219,13 @@ export class SubscriptionService {
   async updateSubscription(
     id: string,
     updateData: UpdateSubscriptionDTO
-  ): Promise<any> {
+  ): Promise<Subscription> {
     try {
       // Validar dados de entrada
       const validatedData = SubscriptionValidation.validateUpdate(updateData);
 
       // Verificar se a assinatura existe
-      const subscription = await this.subscriptionRepository.findById(id);
-      if (!subscription) {
-        throw new NotFoundError(`Assinatura com ID ${id} não encontrada`);
-      }
+      const subscription = await this.subscriptionRepository.findById(id, true);
 
       // Se o status está sendo alterado para cancelado, usar o método de cancelamento
       if (validatedData.status === SubscriptionStatus.CANCELLED) {
@@ -243,14 +234,39 @@ export class SubscriptionService {
         });
       }
 
+      // Preparar os dados compatíveis com o schema Prisma
+      const updateParams: any = {};
+
+      if (validatedData.status) {
+        updateParams.status = validatedData.status;
+      }
+
+      if (validatedData.end_date) {
+        updateParams.end_date = validatedData.end_date;
+      }
+
+      if (validatedData.next_payment_date) {
+        updateParams.next_payment_date = validatedData.next_payment_date;
+      }
+
+      if (validatedData.is_exempted !== undefined) {
+        updateParams.is_exempted = validatedData.is_exempted;
+
+        if (validatedData.is_exempted) {
+          updateParams.exemption_reason = validatedData.exemption_reason;
+          updateParams.exempted_by = validatedData.exempted_by;
+          updateParams.exemption_date = new Date();
+        }
+      }
+
       // Atualizar a assinatura
       const updatedSubscription = await this.subscriptionRepository.update(
         id,
-        validatedData
+        updateParams
       );
 
       this.logger.logInfo(`Assinatura atualizada: ID ${id}`, this.CONTEXT);
-      return updatedSubscription;
+      return updatedSubscription as unknown as Subscription;
     } catch (error) {
       this.logger.logError(
         error as Error,
@@ -273,16 +289,13 @@ export class SubscriptionService {
   async cancelSubscription(
     id: string,
     cancelData: CancelSubscriptionDTO = {}
-  ): Promise<any> {
+  ): Promise<Subscription> {
     try {
       // Validar dados de entrada
       const validatedData = SubscriptionValidation.validateCancel(cancelData);
 
       // Verificar se a assinatura existe
-      const subscription = await this.subscriptionRepository.findById(id);
-      if (!subscription) {
-        throw new NotFoundError(`Assinatura com ID ${id} não encontrada`);
-      }
+      const subscription = await this.subscriptionRepository.findById(id, true);
 
       // Verificar se a assinatura já está cancelada
       if (
@@ -309,7 +322,7 @@ export class SubscriptionService {
       );
 
       this.logger.logInfo(`Assinatura cancelada: ID ${id}`, this.CONTEXT);
-      return cancelledSubscription;
+      return cancelledSubscription as unknown as Subscription;
     } catch (error) {
       this.logger.logError(
         error as Error,
@@ -328,10 +341,13 @@ export class SubscriptionService {
    * @param includeInactive Incluir planos inativos
    * @returns Lista de planos
    */
-  async listPlans(includeInactive: boolean = false): Promise<any[]> {
+  async listPlans(
+    includeInactive: boolean = false
+  ): Promise<SubscriptionPlan[]> {
     try {
       const status = includeInactive ? undefined : "active";
-      return this.subscriptionRepository.findAllPlans(status);
+      const plans = await this.subscriptionRepository.findAllPlans(status);
+      return plans as unknown as SubscriptionPlan[];
     } catch (error) {
       this.logger.logError(error as Error, `${this.CONTEXT}.listPlans`, {
         includeInactive,
@@ -345,15 +361,10 @@ export class SubscriptionService {
    * @param id ID do plano
    * @returns Plano encontrado
    */
-  async getPlanById(id: string): Promise<any> {
+  async getPlanById(id: string): Promise<SubscriptionPlan> {
     try {
-      const plan = await this.subscriptionRepository.findPlanById(id);
-
-      if (!plan) {
-        throw new NotFoundError(`Plano com ID ${id} não encontrado`);
-      }
-
-      return plan;
+      const plan = await this.subscriptionRepository.findPlanById(id, true);
+      return plan as unknown as SubscriptionPlan;
     } catch (error) {
       this.logger.logError(error as Error, `${this.CONTEXT}.getPlanById`, {
         id,

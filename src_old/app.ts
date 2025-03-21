@@ -1,5 +1,3 @@
-// src/app.ts (modificações)
-
 import express, { Application } from "express";
 import { PrismaClient } from "@prisma/client";
 import { configureMiddlewares } from "./config/middleware";
@@ -10,7 +8,7 @@ import {
   requestIdMiddleware,
 } from "./shared/middleware/error.middleware";
 import { databaseConnectionMiddleware } from "./shared/middleware/database.middleware";
-import { ICache, MemoryCache, RedisCache } from "./shared/utils/cache";
+import { ICache, MemoryCache } from "./shared/cache";
 import { ErrorLogger } from "./shared/utils/error-logger";
 
 /**
@@ -90,6 +88,9 @@ class App {
         this.logger.logInfo("Inicializando cache Redis", "App", {
           url: process.env.REDIS_URL.replace(/:[^:]*@/, ":****@"),
         });
+
+        // Importar dinamicamente para evitar dependência se Redis não for usado
+        const { RedisCache } = require("./shared/cache/redis-cache");
 
         return new RedisCache(
           process.env.REDIS_URL,
