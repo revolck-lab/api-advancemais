@@ -1,41 +1,64 @@
-import { PrismaClient } from '@prisma/client';
-import { 
-  IPayment, 
-  ICreatePaymentDTO, 
+// src/services/payment-service/repositories/payment.repository.ts
+
+import { PrismaClient } from "@prisma/client";
+import { ICache, defaultCache } from "@shared/utils/cache";
+import {
+  IPayment,
   IPaymentFilters,
   PaymentStatus,
-  PaymentType
-} from '../interfaces/payment.interface';
+  PaymentType,
+} from "../interfaces/payment.interface";
+import { NotFoundError } from "@shared/errors/app-error";
+import { ErrorLogger } from "@shared/utils/error-logger";
+
+const logger = ErrorLogger.getInstance();
 
 /**
- * Repositório para operações de pagamentos no banco de dados
+ * Repositório para operações relacionadas a pagamentos
+ * Centraliza todo o acesso a dados relacionados a pagamentos
  */
 export class PaymentRepository {
-  private prisma: PrismaClient;
+  /**
+   * Construtor do repositório de pagamentos
+   * @param prisma Instância do cliente Prisma
+   * @param cache Instância do cache (opcional)
+   */
+  constructor(
+    private readonly prisma: PrismaClient,
+    private readonly cache: ICache = defaultCache
+  ) {}
 
-  constructor(prisma: PrismaClient) {
-    this.prisma = prisma;
-  }
+  /**
+   * Prefixo para as chaves de cache
+   */
+  private readonly CACHE_PREFIX = "payment:";
 
   /**
    * Cria um novo registro de pagamento no banco de dados
    * @param data Dados do pagamento a ser criado
    * @returns Registro de pagamento criado
    */
-  public async create(data: IPayment): Promise<IPayment> {
-    return this.prisma.payment.create({
-      data: {
-        user_id: data.user_id,
-        amount: data.amount,
-        currency: data.currency,
-        description: data.description,
-        status: data.status,
-        payment_method: data.payment_method,
-        payment_type: data.payment_type,
-        external_id: data.external_id,
-        metadata: data.metadata ? JSON.stringify(data.metadata) : null
-      }
-    });
+  public async create(
+    data: Omit<IPayment, "id" | "created_at" | "updated_at">
+  ): Promise<IPayment> {
+    try {
+      // Preparar metadados para o banco
+      const metadata = data.metadata ? JSON.stringify(data.metadata) : null;
+
+      // Criar o pagamento
+      const payment = await this.prisma.payment.create({
+        data: {
+          ...data,
+          metadata,
+        },
+      });
+
+      // Converter os dados de volta para o formato esperado
+      return this.convertPaymentFromDatabase(payment);
+    } catch (error) {
+      logger.logError(error as Error, "PaymentRepository.create", { data });
+      throw error;
+    }
   }
 
   /**
@@ -45,14 +68,38 @@ export class PaymentRepository {
    * @returns Registro de pagamento atualizado
    */
   public async update(id: string, data: Partial<IPayment>): Promise<IPayment> {
-    return this.prisma.payment.update({
-      where: { id },
-      data: {
-        status: data.status,
-        metadata: data.metadata ? JSON.stringify(data.metadata) : undefined,
-        updated_at: new Date()
+    try {
+      // Verificar se o pagamento existe
+      const existingPayment = await this.findById(id);
+      if (!existingPayment) {
+        throw new NotFoundError(`Pagamento com ID ${id} não encontrado`);
       }
-    });
+
+      // Preparar metadados para o banco
+      const updateData: any = {
+        ...data,
+        updated_at: new Date(),
+      };
+
+      if (data.metadata) {
+        updateData.metadata = JSON.stringify(data.metadata);
+      }
+
+      // Atualizar o pagamento
+      const payment = await this.prisma.payment.update({
+        where: { id },
+        data: updateData,
+      });
+
+      // Invalidar cache
+      await this.cache.delete(`${this.CACHE_PREFIX}${id}`);
+
+      // Converter os dados de volta para o formato esperado
+      return this.convertPaymentFromDatabase(payment);
+    } catch (error) {
+      logger.logError(error as Error, "PaymentRepository.update", { id, data });
+      throw error;
+    }
   }
 
   /**
@@ -61,15 +108,48 @@ export class PaymentRepository {
    * @param data Dados a serem atualizados
    * @returns Registro de pagamento atualizado
    */
-  public async updateByExternalId(externalId: string, data: Partial<IPayment>): Promise<IPayment> {
-    return this.prisma.payment.update({
-      where: { external_id: externalId },
-      data: {
-        status: data.status,
-        metadata: data.metadata ? JSON.stringify(data.metadata) : undefined,
-        updated_at: new Date()
+  public async updateByExternalId(
+    externalId: string,
+    data: Partial<IPayment>
+  ): Promise<IPayment> {
+    try {
+      // Verificar se o pagamento existe
+      const existingPayment = await this.findByExternalId(externalId);
+      if (!existingPayment) {
+        throw new NotFoundError(
+          `Pagamento com ID externo ${externalId} não encontrado`
+        );
       }
-    });
+
+      // Preparar metadados para o banco
+      const updateData: any = {
+        ...data,
+        updated_at: new Date(),
+      };
+
+      if (data.metadata) {
+        updateData.metadata = JSON.stringify(data.metadata);
+      }
+
+      // Atualizar o pagamento
+      const payment = await this.prisma.payment.update({
+        where: { external_id: externalId },
+        data: updateData,
+      });
+
+      // Invalidar cache
+      await this.cache.delete(`${this.CACHE_PREFIX}${payment.id}`);
+      await this.cache.delete(`${this.CACHE_PREFIX}external:${externalId}`);
+
+      // Converter os dados de volta para o formato esperado
+      return this.convertPaymentFromDatabase(payment);
+    } catch (error) {
+      logger.logError(error as Error, "PaymentRepository.updateByExternalId", {
+        externalId,
+        data,
+      });
+      throw error;
+    }
   }
 
   /**
@@ -78,16 +158,25 @@ export class PaymentRepository {
    * @returns Registro de pagamento ou null se não encontrado
    */
   public async findById(id: string): Promise<IPayment | null> {
-    const payment = await this.prisma.payment.findUnique({
-      where: { id }
-    });
+    try {
+      // Tentar obter do cache primeiro
+      return await this.cache.getOrSet(
+        `${this.CACHE_PREFIX}${id}`,
+        async () => {
+          const payment = await this.prisma.payment.findUnique({
+            where: { id },
+          });
 
-    if (!payment) return null;
+          if (!payment) return null;
 
-    return {
-      ...payment,
-      metadata: payment.metadata ? JSON.parse(payment.metadata as string) : undefined
-    };
+          return this.convertPaymentFromDatabase(payment);
+        },
+        3600 // 1 hora de cache
+      );
+    } catch (error) {
+      logger.logError(error as Error, "PaymentRepository.findById", { id });
+      throw error;
+    }
   }
 
   /**
@@ -96,16 +185,27 @@ export class PaymentRepository {
    * @returns Registro de pagamento ou null se não encontrado
    */
   public async findByExternalId(externalId: string): Promise<IPayment | null> {
-    const payment = await this.prisma.payment.findUnique({
-      where: { external_id: externalId }
-    });
+    try {
+      // Tentar obter do cache primeiro
+      return await this.cache.getOrSet(
+        `${this.CACHE_PREFIX}external:${externalId}`,
+        async () => {
+          const payment = await this.prisma.payment.findUnique({
+            where: { external_id: externalId },
+          });
 
-    if (!payment) return null;
+          if (!payment) return null;
 
-    return {
-      ...payment,
-      metadata: payment.metadata ? JSON.parse(payment.metadata as string) : undefined
-    };
+          return this.convertPaymentFromDatabase(payment);
+        },
+        3600 // 1 hora de cache
+      );
+    } catch (error) {
+      logger.logError(error as Error, "PaymentRepository.findByExternalId", {
+        externalId,
+      });
+      throw error;
+    }
   }
 
   /**
@@ -113,92 +213,97 @@ export class PaymentRepository {
    * @param filters Filtros para a listagem
    * @returns Lista de pagamentos e contagem total
    */
-  public async findAll(filters: IPaymentFilters): Promise<{ payments: IPayment[], total: number }> {
-    const { 
-      user_id, 
-      status, 
-      payment_type, 
-      start_date, 
-      end_date,
-      page = 1, 
-      limit = 10 
-    } = filters;
+  public async findAll(
+    filters: IPaymentFilters
+  ): Promise<{ payments: IPayment[]; total: number }> {
+    try {
+      const {
+        user_id,
+        status,
+        payment_type,
+        start_date,
+        end_date,
+        page = 1,
+        limit = 10,
+      } = filters;
 
-    const where: any = {};
+      const where: any = {};
 
-    if (user_id) {
-      where.user_id = user_id;
-    }
-
-    if (status) {
-      where.status = status;
-    }
-
-    if (payment_type) {
-      where.payment_type = payment_type;
-    }
-
-    if (start_date || end_date) {
-      where.created_at = {};
-
-      if (start_date) {
-        where.created_at.gte = start_date;
+      if (user_id !== undefined) {
+        where.user_id = user_id;
       }
 
-      if (end_date) {
-        where.created_at.lte = end_date;
+      if (status !== undefined) {
+        where.status = status;
       }
-    }
 
-    const skip = (page - 1) * limit;
+      if (payment_type !== undefined) {
+        where.payment_type = payment_type;
+      }
 
-    // Definimos um tipo para o resultado do Prisma
-    type PrismaPayment = {
-      id: string;
-      user_id: number;
-      amount: number;
-      currency: string;
-      description: string;
-      status: string;
-      payment_method: string;
-      payment_type: string;
-      external_id: string | null;
-      metadata: string | null;
-      created_at: Date;
-      updated_at: Date;
-    };
+      if (start_date || end_date) {
+        where.created_at = {};
 
-    const [payments, total] = await Promise.all([
-      this.prisma.payment.findMany({
+        if (start_date) {
+          where.created_at.gte = start_date;
+        }
+
+        if (end_date) {
+          where.created_at.lte = end_date;
+        }
+      }
+
+      const skip = (page - 1) * limit;
+
+      // Usar chave de cache baseada nos filtros
+      const cacheKey = `${this.CACHE_PREFIX}list:${JSON.stringify({
         where,
-        orderBy: { created_at: 'desc' },
         skip,
-        take: limit
-      }),
-      this.prisma.payment.count({ where })
-    ]);
+        limit,
+      })}`;
 
-    // Parse metadata com tipagem explícita
-    const formattedPayments = payments.map((payment: PrismaPayment) => ({
-      ...payment,
-      metadata: payment.metadata ? JSON.parse(payment.metadata) : undefined
-    }));
+      return await this.cache.getOrSet(
+        cacheKey,
+        async () => {
+          const [payments, total] = await Promise.all([
+            this.prisma.payment.findMany({
+              where,
+              orderBy: { created_at: "desc" },
+              skip,
+              take: limit,
+            }),
+            this.prisma.payment.count({ where }),
+          ]);
 
-    return {
-      payments: formattedPayments as IPayment[],
-      total
-    };
+          // Converter os dados de volta para o formato esperado
+          const formattedPayments = payments.map((payment) =>
+            this.convertPaymentFromDatabase(payment)
+          );
+
+          return {
+            payments: formattedPayments,
+            total,
+          };
+        },
+        300 // 5 minutos de cache para listas
+      );
+    } catch (error) {
+      logger.logError(error as Error, "PaymentRepository.findAll", { filters });
+      throw error;
+    }
   }
 
   /**
-   * Exclui um pagamento do banco de dados
-   * @param id ID do pagamento
-   * @returns true se excluído com sucesso
+   * Converte um registro de pagamento do banco para o formato da interface
+   * @param payment Registro de pagamento do banco
+   * @returns Pagamento no formato esperado
    */
-  public async delete(id: string): Promise<boolean> {
-    await this.prisma.payment.delete({
-      where: { id }
-    });
-    return true;
+  private convertPaymentFromDatabase(payment: any): IPayment {
+    return {
+      ...payment,
+      metadata: payment.metadata
+        ? JSON.parse(payment.metadata as string)
+        : undefined,
+    };
   }
 }
