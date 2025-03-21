@@ -1,138 +1,85 @@
-import { Application } from 'express';
-import path from 'path';
-import swaggerJSDoc from 'swagger-jsdoc';
-import swaggerUi from 'swagger-ui-express';
-import basicAuth from 'express-basic-auth';
-import { version } from '../../package.json';
+import { Application } from "express";
+import path from "path";
+import swaggerJSDoc from "swagger-jsdoc";
+import swaggerUi from "swagger-ui-express";
+import basicAuth from "express-basic-auth";
+import { version } from "../../package.json";
 
 /**
- * Configura o Swagger para documentação da API
- * @param app Instância Express
+ * Cria as opções para o Swagger JSDoc
  */
-export const configureSwagger = (app: Application): void => {
-  console.log('Configurando Swagger...');
-  
-  // Nova URL para a documentação
-  const docsUrl = '/api/v1/docs';
-  
-  // Opções básicas de configuração
-  const swaggerOptions: swaggerJSDoc.Options = {
+const createSwaggerOptions = (): swaggerJSDoc.Options => {
+  const port = process.env.PORT || "3000";
+
+  return {
     definition: {
-      openapi: '3.0.0',
+      openapi: "3.0.0",
       info: {
-        title: 'AdvanceMais API',
-        version: version || '1.0.0',
-        description: 'Documentação da API do AdvanceMais.',
+        title: "AdvanceMais API",
+        version: version || "1.0.0",
+        description: "Documentação da API do AdvanceMais.",
         contact: {
-          name: 'Suporte AdvanceMais',
-          email: 'suporte@advancemais.com.br'
+          name: "Suporte AdvanceMais",
+          email: "suporte@advancemais.com.br",
         },
         license: {
-          name: 'Proprietário',
+          name: "Proprietário",
         },
       },
       servers: [
         {
-          url: `http://localhost:${process.env.PORT || 3000}`,
-          description: 'Servidor de Desenvolvimento',
+          url: `http://localhost:${port}`,
+          description: "Servidor de Desenvolvimento",
         },
         {
-          url: 'https://api-advancemais.onrender.com',
-          description: 'Servidor de Produção',
+          url: "https://api-advancemais.onrender.com",
+          description: "Servidor de Produção",
         },
       ],
       components: {
         securitySchemes: {
           bearerAuth: {
-            type: 'http',
-            scheme: 'bearer',
-            bearerFormat: 'JWT',
+            type: "http",
+            scheme: "bearer",
+            bearerFormat: "JWT",
           },
         },
       },
       tags: [
-        { name: 'Autenticação', description: 'Endpoints para autenticação e cadastro de usuários' },
-        { name: 'Usuários', description: 'Gerenciamento de usuários do sistema' },
-        { name: 'Empresas', description: 'Gerenciamento de empresas e escritórios jurídicos' },
-        { name: 'Pagamentos', description: 'Processamento de pagamentos e assinaturas' },
-        { name: 'CMS', description: 'Gerenciamento de conteúdo do site' },
-      ]
+        {
+          name: "Autenticação",
+          description: "Endpoints para autenticação e cadastro de usuários",
+        },
+        {
+          name: "Usuários",
+          description: "Gerenciamento de usuários do sistema",
+        },
+        {
+          name: "Empresas",
+          description: "Gerenciamento de empresas e escritórios jurídicos",
+        },
+        {
+          name: "Pagamentos",
+          description: "Processamento de pagamentos e assinaturas",
+        },
+        { name: "CMS", description: "Gerenciamento de conteúdo do site" },
+        { name: "Vagas", description: "Gerenciamento de vagas de emprego" },
+      ],
     },
-    // Caminhos para arquivos com anotações JSDoc
     apis: [
-      path.join(__dirname, '../swagger/schemas/*.js'),
-      path.join(__dirname, '../gateway/routes/*.js'),
-      path.join(__dirname, '../gateway/controllers/*.js'),
-      path.join(__dirname, '../services/**/routes/*.js'),
-      path.join(__dirname, '../services/**/controllers/*.js'),
+      path.join(__dirname, "../swagger/schemas/*.js"),
+      path.join(__dirname, "../gateway/routes/*.js"),
+      path.join(__dirname, "../gateway/controllers/*.js"),
+      path.join(__dirname, "../services/**/routes/*.js"),
+      path.join(__dirname, "../services/**/controllers/*.js"),
     ],
   };
-
-  try {
-    // Gera a especificação Swagger
-    const swaggerSpec = swaggerJSDoc(swaggerOptions);
-    
-    // Configuração de autenticação básica
-    const username = process.env.DOCS_USERNAME || 'admin';
-    const password = process.env.DOCS_PASSWORD || 'advancemais2025';
-    
-    // Usar Basic Auth do express-basic-auth para proteção da documentação
-    const basicAuthMiddleware = basicAuth({
-      users: { [username]: password },
-      challenge: true,
-      realm: 'Documentação da API AdvanceMais',
-    });
-
-    // CSS personalizado
-    const customCss = getSwaggerCustomCSS();
-    
-    // Aplica autenticação básica na rota da documentação
-    app.use(docsUrl, basicAuthMiddleware, swaggerUi.serve);
-    app.get(docsUrl, swaggerUi.setup(swaggerSpec, {
-      explorer: true,
-      customCss: customCss,
-      customSiteTitle: 'AdvanceMais API - Documentação',
-      customfavIcon: '/favicon.ico',
-      swaggerOptions: {
-        persistAuthorization: true,
-        docExpansion: 'list',
-        filter: true,
-        displayRequestDuration: true,
-        defaultModelsExpandDepth: 1,
-        defaultModelExpandDepth: 2,
-        tagsSorter: 'alpha',
-        operationsSorter: 'alpha',
-      }
-    }));
-    
-    // Também protege o JSON da documentação
-    app.get(`${docsUrl}.json`, basicAuthMiddleware, (req, res) => {
-      res.setHeader('Content-Type', 'application/json');
-      res.send(swaggerSpec);
-    });
-    
-    // Redirecionar da rota anterior
-    app.get('/api-docs', (req, res) => {
-      res.redirect(docsUrl);
-    });
-    
-    console.log(`✅ Documentação Swagger configurada com sucesso em ${docsUrl}`);
-    console.log(`✅ Credenciais para acesso: ${username}:${password}`);
-    
-    // Se estiver usando credenciais padrão, mostrar aviso
-    if (!process.env.DOCS_USERNAME || !process.env.DOCS_PASSWORD) {
-      console.warn('⚠️ AVISO: Usando credenciais padrão para a documentação!');
-      console.warn('⚠️ Configure DOCS_USERNAME e DOCS_PASSWORD nas variáveis de ambiente para aumentar a segurança.');
-    }
-  } catch (error) {
-    console.error('❌ Erro ao configurar Swagger:', error);
-  }
 };
 
 /**
  * Retorna o CSS personalizado para o Swagger UI
  */
-function getSwaggerCustomCSS(): string {
+const getSwaggerCustomCSS = (): string => {
   return `
     @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
     
@@ -213,27 +160,7 @@ function getSwaggerCustomCSS(): string {
       border: none;
     }
     
-    .swagger-ui .opblock.opblock-get {
-      border-color: #00BCD4;
-      background: rgba(0, 188, 212, 0.05);
-    }
-    
-    .swagger-ui .opblock.opblock-post {
-      border-color: #00C853;
-      background: rgba(0, 200, 83, 0.05);
-    }
-    
-    .swagger-ui .opblock.opblock-put {
-      border-color: #FB8C00;
-      background: rgba(251, 140, 0, 0.05);
-    }
-    
-    .swagger-ui .opblock.opblock-delete {
-      border-color: #F44336;
-      background: rgba(244, 67, 54, 0.05);
-    }
-    
-    /* Melhorar o layout para mobile */
+    /* Responsividade para mobile */
     @media (max-width: 768px) {
       .swagger-ui .wrapper:before {
         display: none;
@@ -245,4 +172,83 @@ function getSwaggerCustomCSS(): string {
       }
     }
   `;
-}
+};
+
+/**
+ * Configura o Swagger para documentação da API
+ * @param app Instância Express
+ */
+export const configureSwagger = (app: Application): void => {
+  try {
+    console.log("Configurando Swagger...");
+
+    // Nova URL para a documentação
+    const docsUrl = "/api/v1/docs";
+
+    // Obter opções de configuração
+    const swaggerOptions = createSwaggerOptions();
+
+    // Gerar especificação Swagger
+    const swaggerSpec = swaggerJSDoc(swaggerOptions);
+
+    // Obter credenciais e configurar autenticação
+    const username = process.env.DOCS_USERNAME || "admin";
+    const password = process.env.DOCS_PASSWORD || "advancemais2025";
+
+    const basicAuthMiddleware = basicAuth({
+      users: { [username]: password },
+      challenge: true,
+      realm: "Documentação da API AdvanceMais",
+    });
+
+    // CSS personalizado
+    const customCss = getSwaggerCustomCSS();
+
+    // Configurações de UI
+    const swaggerUiOptions = {
+      explorer: true,
+      customCss,
+      customSiteTitle: "AdvanceMais API - Documentação",
+      customfavIcon: "/favicon.ico",
+      swaggerOptions: {
+        persistAuthorization: true,
+        docExpansion: "list",
+        filter: true,
+        displayRequestDuration: true,
+        defaultModelsExpandDepth: 1,
+        defaultModelExpandDepth: 2,
+        tagsSorter: "alpha",
+        operationsSorter: "alpha",
+      },
+    };
+
+    // Configurar rotas do Swagger
+    app.use(docsUrl, basicAuthMiddleware, swaggerUi.serve);
+    app.get(docsUrl, swaggerUi.setup(swaggerSpec, swaggerUiOptions));
+
+    // Rota para JSON da documentação
+    app.get(`${docsUrl}.json`, basicAuthMiddleware, (req, res) => {
+      res.setHeader("Content-Type", "application/json");
+      res.send(swaggerSpec);
+    });
+
+    // Redirecionamento da rota antiga
+    app.get("/api-docs", (req, res) => {
+      res.redirect(docsUrl);
+    });
+
+    console.log(
+      `✅ Documentação Swagger configurada com sucesso em ${docsUrl}`
+    );
+
+    // Aviso de segurança para credenciais padrão
+    if (!process.env.DOCS_USERNAME || !process.env.DOCS_PASSWORD) {
+      console.warn("⚠️ AVISO: Usando credenciais padrão para a documentação!");
+      console.warn(
+        "⚠️ Configure DOCS_USERNAME e DOCS_PASSWORD nas variáveis de ambiente para aumentar a segurança."
+      );
+    }
+  } catch (error) {
+    console.error("❌ Erro ao configurar Swagger:", error);
+  }
+};
