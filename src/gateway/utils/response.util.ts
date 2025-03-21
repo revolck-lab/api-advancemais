@@ -1,8 +1,3 @@
-/**
- * Utilitário para padronização de respostas da API
- * Fornece funções para gerar respostas em formato consistente
- */
-
 import { Response } from "express";
 
 /**

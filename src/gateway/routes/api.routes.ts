@@ -1,8 +1,3 @@
-/**
- * Configuração das rotas principais da API
- * Centraliza e organiza todas as rotas dos diferentes serviços
- */
-
 import { Router } from "express";
 import authRoutes from "./auth.routes";
 import paymentRoutes from "./payment.routes";
@@ -34,7 +29,6 @@ export const initApiRoutes = (appInstance: any): Router => {
    */
   router.get("/version", systemController.getVersion);
 
-  // Configura as rotas de serviços
   router.use("/auth", authRoutes);
   router.use("/payments", paymentRoutes);
   router.use("/companies", companyRoutes);

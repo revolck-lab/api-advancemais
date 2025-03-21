@@ -1,10 +1,5 @@
-/**
- * Gateway da API
- * Atua como ponto central de entrada para requisições, roteando-as para os serviços apropriados
- */
-
 import { Router } from "express";
-import initApiRoutes from "./routes/api.routes";
+import initApiRoutes from "@/gateway/routes/api.routes";
 import {
   errorHandler,
   notFoundHandler,

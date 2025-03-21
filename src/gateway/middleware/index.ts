@@ -1,8 +1,3 @@
-/**
- * Centraliza a importação e exportação de middleware específico do gateway
- * Facilita o gerenciamento e uso consistente de middleware em toda a aplicação
- */
-
 import authMiddleware from "@/shared/middleware/auth.middleware";
 import {
   errorHandler,

@@ -1,221 +1,190 @@
-// src/services/company-service/controllers/company.controller.ts
-
 import { Request, Response } from "express";
 import { PrismaClient } from "@prisma/client";
+import { BaseController } from "./base.controller";
 import { CompanyService } from "../services/company.service";
-import { AppError, ValidationError } from "@shared/errors/app-error";
+import {
+  Company,
+  CompanyFilters,
+  CompanyListResult,
+  CreateCompanyDTO,
+  UpdateCompanyDTO,
+  UpdateCompanyStatusDTO,
+} from "../interfaces/company.interface";
 
-/**
- * Controlador para operações relacionadas a empresas
- * Responsável por processar requisições HTTP relacionadas a empresas
- */
-export class CompanyController {
+export class CompanyController extends BaseController {
   private companyService: CompanyService;
+  private readonly CONTEXT = "CompanyController";
 
   /**
-   * Construtor do controlador de empresas
+   * Inicializa o controlador com dependências necessárias
    * @param prisma Instância do cliente Prisma
    */
   constructor(prisma: PrismaClient) {
+    super();
     this.companyService = new CompanyService(prisma);
   }
 
   /**
    * Cria uma nova empresa
-   * @param req Requisição com os dados da empresa
+   * @route POST /api/companies
+   * @param req Requisição com os dados da empresa no corpo
    * @param res Resposta da API
    */
   public createCompany = async (req: Request, res: Response): Promise<void> => {
-    try {
-      const company = await this.companyService.createCompany(req.body);
-
-      res.status(201).json({
-        status: "success",
-        data: company,
-      });
-    } catch (error) {
-      this.handleError(res, error);
-    }
+    await this.executeHandler(
+      req,
+      res,
+      async () => {
+        const companyData = req.body as CreateCompanyDTO;
+        const company = await this.companyService.createCompany(companyData);
+        this.sendSuccess<Partial<Company>>(
+          res,
+          company,
+          "Empresa criada com sucesso",
+          201
+        );
+      },
+      `${this.CONTEXT}.createCompany`
+    );
   };
 
   /**
    * Busca uma empresa pelo ID
-   * @param req Requisição com o ID da empresa
+   * @route GET /api/companies/:id
+   * @param req Requisição com o ID da empresa na URL
    * @param res Resposta da API
    */
   public getCompanyById = async (
     req: Request,
     res: Response
   ): Promise<void> => {
-    try {
-      const id = parseInt(req.params.id, 10);
+    await this.executeHandler(
+      req,
+      res,
+      async () => {
+        const id = this.extractId(req);
+        if (id === null) return;
 
-      if (isNaN(id)) {
-        res.status(400).json({
-          status: "error",
-          message: "ID da empresa inválido",
-        });
-        return;
-      }
-
-      const company = await this.companyService.getCompanyById(id);
-
-      res.status(200).json({
-        status: "success",
-        data: company,
-      });
-    } catch (error) {
-      this.handleError(res, error);
-    }
+        const company = await this.companyService.getCompanyById(id);
+        this.sendSuccess<Partial<Company>>(res, company);
+      },
+      `${this.CONTEXT}.getCompanyById`
+    );
   };
 
   /**
    * Lista empresas com filtros
-   * @param req Requisição com filtros opcionais
+   * @route GET /api/companies
+   * @param req Requisição com filtros opcionais nos query params
    * @param res Resposta da API
    */
   public getCompanies = async (req: Request, res: Response): Promise<void> => {
-    try {
-      const result = await this.companyService.listCompanies(req.query);
+    await this.executeHandler(
+      req,
+      res,
+      async () => {
+        const filters: CompanyFilters = {
+          ...this.getPaginationParams(req.query),
+          status:
+            req.query.status !== undefined
+              ? Number(req.query.status)
+              : undefined,
+          search: req.query.search as string | undefined,
+        };
 
-      res.status(200).json({
-        status: "success",
-        data: result.companies,
-        pagination: {
-          total: result.total,
-          page: result.page,
-          limit: result.limit,
-          pages: result.totalPages,
-        },
-      });
-    } catch (error) {
-      this.handleError(res, error);
-    }
+        const result = await this.companyService.listCompanies(filters);
+        this.sendSuccess<CompanyListResult>(res, result);
+      },
+      `${this.CONTEXT}.getCompanies`
+    );
   };
 
   /**
    * Atualiza os dados de uma empresa
-   * @param req Requisição com o ID da empresa e dados para atualização
+   * @route PUT /api/companies/:id
+   * @param req Requisição com o ID da empresa na URL e dados no corpo
    * @param res Resposta da API
    */
   public updateCompany = async (req: Request, res: Response): Promise<void> => {
-    try {
-      const id = parseInt(req.params.id, 10);
+    await this.executeHandler(
+      req,
+      res,
+      async () => {
+        const id = this.extractId(req);
+        if (id === null) return;
 
-      if (isNaN(id)) {
-        res.status(400).json({
-          status: "error",
-          message: "ID da empresa inválido",
-        });
-        return;
-      }
-
-      const company = await this.companyService.updateCompany(id, req.body);
-
-      res.status(200).json({
-        status: "success",
-        data: company,
-      });
-    } catch (error) {
-      this.handleError(res, error);
-    }
+        const updateData = req.body as UpdateCompanyDTO;
+        const company = await this.companyService.updateCompany(id, updateData);
+        this.sendSuccess<Partial<Company>>(
+          res,
+          company,
+          "Empresa atualizada com sucesso"
+        );
+      },
+      `${this.CONTEXT}.updateCompany`
+    );
   };
 
   /**
    * Atualiza o status de uma empresa
-   * @param req Requisição com o ID da empresa e novo status
+   * @route PATCH /api/companies/:id/status
+   * @param req Requisição com o ID da empresa na URL e novo status no corpo
    * @param res Resposta da API
    */
   public updateCompanyStatus = async (
     req: Request,
     res: Response
   ): Promise<void> => {
-    try {
-      const id = parseInt(req.params.id, 10);
+    await this.executeHandler(
+      req,
+      res,
+      async () => {
+        const id = this.extractId(req);
+        if (id === null) return;
 
-      if (isNaN(id)) {
-        res.status(400).json({
-          status: "error",
-          message: "ID da empresa inválido",
-        });
-        return;
-      }
+        const statusData = req.body as UpdateCompanyStatusDTO;
+        const company = await this.companyService.updateCompanyStatus(
+          id,
+          statusData
+        );
 
-      const company = await this.companyService.updateCompanyStatus(
-        id,
-        req.body
-      );
+        const statusMessage =
+          statusData.status === 1
+            ? "Empresa ativada com sucesso"
+            : "Empresa desativada com sucesso";
 
-      res.status(200).json({
-        status: "success",
-        data: company,
-      });
-    } catch (error) {
-      this.handleError(res, error);
-    }
+        this.sendSuccess<Partial<Company>>(res, company, statusMessage);
+      },
+      `${this.CONTEXT}.updateCompanyStatus`
+    );
   };
 
   /**
    * Verifica se uma empresa possui assinatura ativa
-   * @param req Requisição com o ID da empresa
+   * @route GET /api/companies/:id/subscription/check
+   * @param req Requisição com o ID da empresa na URL
    * @param res Resposta da API
    */
   public checkSubscription = async (
     req: Request,
     res: Response
   ): Promise<void> => {
-    try {
-      const id = parseInt(req.params.id, 10);
+    await this.executeHandler(
+      req,
+      res,
+      async () => {
+        const id = this.extractId(req);
+        if (id === null) return;
 
-      if (isNaN(id)) {
-        res.status(400).json({
-          status: "error",
-          message: "ID da empresa inválido",
-        });
-        return;
-      }
+        const hasActiveSubscription =
+          await this.companyService.hasActiveSubscription(id);
 
-      const hasActiveSubscription =
-        await this.companyService.hasActiveSubscription(id);
-
-      res.status(200).json({
-        status: "success",
-        data: {
+        this.sendSuccess(res, {
           hasActiveSubscription,
-        },
-      });
-    } catch (error) {
-      this.handleError(res, error);
-    }
+          companyId: id,
+        });
+      },
+      `${this.CONTEXT}.checkSubscription`
+    );
   };
-
-  /**
-   * Trata erros de forma padronizada
-   * @param res Objeto de resposta
-   * @param error Erro a ser tratado
-   */
-  private handleError(res: Response, error: any): void {
-    console.error(`[Company Error] ${error.message || "Unknown error"}`);
-
-    if (error instanceof ValidationError) {
-      res.status(error.statusCode).json({
-        status: "error",
-        message: error.message,
-        details: error.details,
-      });
-    } else if (error instanceof AppError) {
-      res.status(error.statusCode).json({
-        status: "error",
-        message: error.message,
-      });
-    } else {
-      res.status(500).json({
-        status: "error",
-        message: "Erro interno do servidor",
-        ...(process.env.NODE_ENV === "development" && {
-          details: error.message,
-        }),
-      });
-    }
-  }
 }

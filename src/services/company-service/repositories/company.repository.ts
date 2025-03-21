@@ -1,15 +1,18 @@
-// src/services/company-service/repositories/company.repository.ts
-
 import { PrismaClient, Company, Address } from "@prisma/client";
-import { CompanyFilters } from "../interfaces/company.interface";
+import { NotFoundError } from "@shared/errors/app-error";
+import { ErrorLogger } from "@shared/utils/error-logger";
+import { CompanyFilters, PartialAddressDTO } from "../interfaces";
 
 /**
- * Repositório para operações relacionadas a empresas
- * Centraliza todo o acesso a dados relacionados a empresas
+ * Repositório para operações de acesso a dados relacionadas a empresas
+ * Implementa operações CRUD e consultas específicas para empresas
  */
 export class CompanyRepository {
+  private readonly logger = ErrorLogger.getInstance();
+  private readonly CONTEXT = "CompanyRepository";
+
   /**
-   * Construtor do repositório de empresas
+   * Inicializa o repositório com a conexão do banco de dados
    * @param prisma Instância do cliente Prisma
    */
   constructor(private readonly prisma: PrismaClient) {}
@@ -27,44 +30,79 @@ export class CompanyRepository {
     >,
     addressData: Omit<Address, "id">
   ): Promise<Company> {
-    return this.prisma.company.create({
-      data: {
-        ...companyData,
-        address: {
-          create: addressData,
+    try {
+      return await this.prisma.company.create({
+        data: {
+          ...companyData,
+          address: {
+            create: addressData,
+          },
         },
-      },
-      include: {
-        address: true,
-        role: true,
-      },
-    });
+        include: {
+          address: true,
+          role: true,
+        },
+      });
+    } catch (error) {
+      this.logger.logError(error as Error, `${this.CONTEXT}.createCompany`, {
+        companyData: { ...companyData, password: "[REDACTED]" },
+        addressData,
+      });
+      throw error;
+    }
   }
 
   /**
    * Busca uma empresa pelo ID
    * @param id ID da empresa
-   * @returns Empresa encontrada ou null
+   * @returns Empresa encontrada com suas relações ou null
+   * @throws NotFoundError se especificado throwOnNotFound e não encontrar
    */
-  async findById(id: number): Promise<Company | null> {
-    return this.prisma.company.findUnique({
-      where: { id },
-      include: {
-        address: true,
-        role: true,
-      },
-    });
+  async findById(
+    id: number,
+    throwOnNotFound: boolean = false
+  ): Promise<Company | null> {
+    try {
+      const company = await this.prisma.company.findUnique({
+        where: { id },
+        include: {
+          address: true,
+          role: true,
+        },
+      });
+
+      if (!company && throwOnNotFound) {
+        throw new NotFoundError(`Empresa com ID ${id} não encontrada`);
+      }
+
+      return company;
+    } catch (error) {
+      // Não logar NotFoundError se foi explicitamente solicitado
+      if (error instanceof NotFoundError) {
+        throw error;
+      }
+
+      this.logger.logError(error as Error, `${this.CONTEXT}.findById`, { id });
+      throw error;
+    }
   }
 
   /**
    * Busca uma empresa pelo CNPJ
-   * @param cnpj CNPJ da empresa
+   * @param cnpj CNPJ da empresa (somente números)
    * @returns Empresa encontrada ou null
    */
   async findByCnpj(cnpj: string): Promise<Company | null> {
-    return this.prisma.company.findUnique({
-      where: { cnpj },
-    });
+    try {
+      return await this.prisma.company.findUnique({
+        where: { cnpj },
+      });
+    } catch (error) {
+      this.logger.logError(error as Error, `${this.CONTEXT}.findByCnpj`, {
+        cnpj,
+      });
+      throw error;
+    }
   }
 
   /**
@@ -73,9 +111,16 @@ export class CompanyRepository {
    * @returns Empresa encontrada ou null
    */
   async findByEmail(email: string): Promise<Company | null> {
-    return this.prisma.company.findUnique({
-      where: { email },
-    });
+    try {
+      return await this.prisma.company.findUnique({
+        where: { email },
+      });
+    } catch (error) {
+      this.logger.logError(error as Error, `${this.CONTEXT}.findByEmail`, {
+        email,
+      });
+      throw error;
+    }
   }
 
   /**
@@ -86,33 +131,51 @@ export class CompanyRepository {
   async findAll(
     filters: CompanyFilters
   ): Promise<{ companies: Company[]; total: number }> {
-    const { status, page = 1, limit = 10 } = filters;
+    try {
+      const { status, search, page = 1, limit = 10 } = filters;
+      const skip = (page - 1) * limit;
 
-    const where: any = {};
+      // Constrói a cláusula where com os filtros
+      const where: any = {};
 
-    if (status !== undefined) {
-      where.status = status;
+      if (status !== undefined) {
+        where.status = status;
+      }
+
+      // Adiciona busca por texto em campos relevantes
+      if (search) {
+        where.OR = [
+          { trade_name: { contains: search } },
+          { business_name: { contains: search } },
+          { cnpj: { contains: search } },
+          { email: { contains: search } },
+        ];
+      }
+
+      // Executa as consultas em paralelo para performance
+      const [companies, total] = await Promise.all([
+        this.prisma.company.findMany({
+          where,
+          include: {
+            address: true,
+            role: true,
+          },
+          skip,
+          take: limit,
+          orderBy: {
+            created_at: "desc",
+          },
+        }),
+        this.prisma.company.count({ where }),
+      ]);
+
+      return { companies, total };
+    } catch (error) {
+      this.logger.logError(error as Error, `${this.CONTEXT}.findAll`, {
+        filters,
+      });
+      throw error;
     }
-
-    const skip = (page - 1) * limit;
-
-    const [companies, total] = await Promise.all([
-      this.prisma.company.findMany({
-        where,
-        include: {
-          address: true,
-          role: true,
-        },
-        skip,
-        take: limit,
-        orderBy: {
-          created_at: "desc",
-        },
-      }),
-      this.prisma.company.count({ where }),
-    ]);
-
-    return { companies, total };
   }
 
   /**
@@ -120,6 +183,7 @@ export class CompanyRepository {
    * @param id ID da empresa
    * @param companyData Dados a serem atualizados
    * @returns Empresa atualizada
+   * @throws NotFoundError se a empresa não existir
    */
   async update(
     id: number,
@@ -130,92 +194,189 @@ export class CompanyRepository {
       >
     >
   ): Promise<Company> {
-    return this.prisma.company.update({
-      where: { id },
-      data: {
-        ...companyData,
-        updated_at: new Date(),
-      },
-      include: {
-        address: true,
-        role: true,
-      },
-    });
+    try {
+      // Verificar se a empresa existe
+      const exists = await this.prisma.company.findUnique({
+        where: { id },
+        select: { id: true },
+      });
+
+      if (!exists) {
+        throw new NotFoundError(`Empresa com ID ${id} não encontrada`);
+      }
+
+      return await this.prisma.company.update({
+        where: { id },
+        data: {
+          ...companyData,
+          updated_at: new Date(),
+        },
+        include: {
+          address: true,
+          role: true,
+        },
+      });
+    } catch (error) {
+      // Não logar NotFoundError pois já foi tratado
+      if (error instanceof NotFoundError) {
+        throw error;
+      }
+
+      this.logger.logError(error as Error, `${this.CONTEXT}.update`, {
+        id,
+        companyData,
+      });
+      throw error;
+    }
   }
 
   /**
    * Atualiza o status de uma empresa
    * @param id ID da empresa
-   * @param status Novo status
+   * @param status Novo status (0=inativo, 1=ativo)
    * @returns Empresa atualizada
+   * @throws NotFoundError se a empresa não existir
    */
   async updateStatus(id: number, status: number): Promise<Company> {
-    return this.prisma.company.update({
-      where: { id },
-      data: {
+    try {
+      // Verificar se a empresa existe
+      const exists = await this.prisma.company.findUnique({
+        where: { id },
+        select: { id: true },
+      });
+
+      if (!exists) {
+        throw new NotFoundError(`Empresa com ID ${id} não encontrada`);
+      }
+
+      return await this.prisma.company.update({
+        where: { id },
+        data: {
+          status,
+          updated_at: new Date(),
+        },
+        include: {
+          address: true,
+          role: true,
+        },
+      });
+    } catch (error) {
+      // Não logar NotFoundError pois já foi tratado
+      if (error instanceof NotFoundError) {
+        throw error;
+      }
+
+      this.logger.logError(error as Error, `${this.CONTEXT}.updateStatus`, {
+        id,
         status,
-        updated_at: new Date(),
-      },
-      include: {
-        address: true,
-        role: true,
-      },
-    });
+      });
+      throw error;
+    }
   }
 
   /**
    * Atualiza o endereço de uma empresa
-   * @param id ID da empresa
-   * @param addressData Dados do endereço
+   * @param companyId ID da empresa
+   * @param addressData Dados do endereço a serem atualizados
    * @returns Endereço atualizado
+   * @throws NotFoundError se a empresa não existir
    */
   async updateAddress(
     companyId: number,
-    addressData: Partial<Omit<Address, "id" | "state_id">>
+    addressData: PartialAddressDTO
   ): Promise<Address> {
-    // Primeiro, busca o ID do endereço da empresa
-    const company = await this.prisma.company.findUnique({
-      where: { id: companyId },
-      select: { address_id: true },
-    });
+    try {
+      // Primeiro, busca o ID do endereço da empresa
+      const company = await this.prisma.company.findUnique({
+        where: { id: companyId },
+        select: { address_id: true },
+      });
 
-    if (!company) {
-      throw new Error(`Empresa com ID ${companyId} não encontrada`);
+      if (!company) {
+        throw new NotFoundError(`Empresa com ID ${companyId} não encontrada`);
+      }
+
+      // Atualiza o endereço
+      return await this.prisma.address.update({
+        where: { id: company.address_id },
+        data: {
+          ...addressData,
+          // Não atualizar state_id se não fornecido explicitamente
+          state_id: addressData.state ? undefined : undefined,
+        },
+      });
+    } catch (error) {
+      // Não logar NotFoundError pois já foi tratado
+      if (error instanceof NotFoundError) {
+        throw error;
+      }
+
+      this.logger.logError(error as Error, `${this.CONTEXT}.updateAddress`, {
+        companyId,
+        addressData,
+      });
+      throw error;
     }
-
-    // Atualiza o endereço
-    return this.prisma.address.update({
-      where: { id: company.address_id },
-      data: addressData,
-    });
   }
 
   /**
    * Verifica se uma empresa possui assinatura ativa
    * @param companyId ID da empresa
    * @returns True se possui assinatura ativa
+   * @throws NotFoundError se a empresa não existir
    */
   async hasActiveSubscription(companyId: number): Promise<boolean> {
-    const subscription = await this.prisma.companySubscription.findFirst({
-      where: {
-        company_id: companyId,
-        status: {
-          in: ["active", "authorized", "pending"],
-        },
-        OR: [{ end_date: null }, { end_date: { gt: new Date() } }],
-      },
-    });
+    try {
+      // Verifica se a empresa existe
+      const companyExists = await this.prisma.company.findUnique({
+        where: { id: companyId },
+        select: { id: true },
+      });
 
-    return !!subscription;
+      if (!companyExists) {
+        throw new NotFoundError(`Empresa com ID ${companyId} não encontrada`);
+      }
+
+      // Busca por assinatura ativa
+      const subscription = await this.prisma.companySubscription.findFirst({
+        where: {
+          company_id: companyId,
+          status: {
+            in: ["active", "authorized", "pending"],
+          },
+          OR: [{ end_date: null }, { end_date: { gt: new Date() } }],
+        },
+        select: { id: true },
+      });
+
+      return !!subscription;
+    } catch (error) {
+      // Não logar NotFoundError pois já foi tratado
+      if (error instanceof NotFoundError) {
+        throw error;
+      }
+
+      this.logger.logError(
+        error as Error,
+        `${this.CONTEXT}.hasActiveSubscription`,
+        { companyId }
+      );
+      throw error;
+    }
   }
 
   /**
    * Conta o número total de empresas
-   * @param status Status opcional para filtro
+   * @param status Status opcional para filtro (0=inativo, 1=ativo)
    * @returns Total de empresas
    */
   async count(status?: number): Promise<number> {
-    const where = status !== undefined ? { status } : {};
-    return this.prisma.company.count({ where });
+    try {
+      const where = status !== undefined ? { status } : {};
+      return await this.prisma.company.count({ where });
+    } catch (error) {
+      this.logger.logError(error as Error, `${this.CONTEXT}.count`, { status });
+      throw error;
+    }
   }
 }

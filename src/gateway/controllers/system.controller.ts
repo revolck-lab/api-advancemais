@@ -1,11 +1,6 @@
-/**
- * Controlador para endpoints de sistema como health check, versão e informações da aplicação
- * Gerencia os endpoints que fornecem informações sobre o estado do sistema
- */
-
 import { Request, Response } from "express";
 import { BaseController } from "./base.controller";
-import ApiResponse from "../utils/response.util";
+import ApiResponse from "@/gateway/utils/response.util";
 
 /**
  * Controlador para endpoints relacionados ao sistema
@@ -81,8 +76,8 @@ export class SystemController extends BaseController {
         },
       };
 
-      // Para manter compatibilidade com a implementação anterior,
-      // retornamos diretamente o objeto JSON em vez de usar ApiResponse
+      // Para manter compatibilidade com a implementação retorna
+      // diretamente o objeto JSON em vez de usar ApiResponse
       res.status(200).json(healthInfo);
     });
   };

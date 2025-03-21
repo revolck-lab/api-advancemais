@@ -182,7 +182,7 @@ export const configureSwagger = (app: Application): void => {
   try {
     console.log("Configurando Swagger...");
 
-    // Nova URL para a documentação
+    // URL para a documentação
     const docsUrl = "/api/v1/docs";
 
     // Obter opções de configuração
@@ -233,9 +233,9 @@ export const configureSwagger = (app: Application): void => {
     });
 
     // Redirecionamento da rota antiga
-    app.get("/api-docs", (req, res) => {
-      res.redirect(docsUrl);
-    });
+    // app.get("/api-docs", (req, res) => {
+    //   res.redirect(docsUrl);
+    // });
 
     console.log(
       `✅ Documentação Swagger configurada com sucesso em ${docsUrl}`

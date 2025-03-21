@@ -1,8 +1,3 @@
-/**
- * Configuração centralizada de todas as rotas do gateway
- * Configura rotas principais, estáticas e handlers para erros
- */
-
 import { Application, Request, Response } from "express";
 import path from "path";
 import { initApiRoutes } from "./api.routes";

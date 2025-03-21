@@ -1,10 +1,5 @@
-/**
- * Controlador base que fornece métodos compartilhados para todos os controladores
- * Implementa padrões de resposta consistentes e tratamento de erros comum
- */
-
 import { Request, Response } from "express";
-import ApiResponse from "../utils/response.util";
+import ApiResponse from "@/gateway/utils/response.util";
 import { AppError } from "@/shared/errors/app-error";
 
 /**
