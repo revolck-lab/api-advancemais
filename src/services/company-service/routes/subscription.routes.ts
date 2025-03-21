@@ -1,18 +1,18 @@
-// src/services/company-service/routes/subscription.routes.ts
-
 import { Router } from "express";
-import { PrismaClient } from "@prisma/client";
 import { SubscriptionController } from "../controllers/subscription.controller";
 import authMiddleware from "@shared/middleware/auth.middleware";
 import app from "@/app";
 
 /**
- * Rotas para operações de assinaturas de empresas
+ * Configuração de rotas para operações de assinaturas de empresas
+ * @module subscriptionRoutes
  */
 const subscriptionRoutes = Router();
-const prisma = app.prisma;
-const subscriptionController = new SubscriptionController(prisma);
 
+// Inicializa o controller com a instância do Prisma do app
+const subscriptionController = new SubscriptionController(app.prisma);
+
+// Rota para criar uma nova assinatura (acesso restrito a administradores)
 /**
  * @swagger
  * /api/companies/subscriptions:
@@ -27,29 +27,7 @@ const subscriptionController = new SubscriptionController(prisma);
  *       content:
  *         application/json:
  *           schema:
- *             type: object
- *             properties:
- *               company_id:
- *                 type: integer
- *                 example: 1
- *               plan_id:
- *                 type: string
- *                 example: 12345678-1234-1234-1234-123456789012
- *               payment_method_id:
- *                 type: string
- *                 example: credit_card
- *               auto_recurring:
- *                 type: boolean
- *                 example: true
- *               is_exempted:
- *                 type: boolean
- *                 example: false
- *               exemption_reason:
- *                 type: string
- *                 example: Parceria institucional
- *               exempted_by:
- *                 type: integer
- *                 example: 1
+ *             $ref: '#/components/schemas/CreateSubscriptionDTO'
  *     responses:
  *       201:
  *         description: Assinatura criada com sucesso
@@ -229,23 +207,7 @@ subscriptionRoutes.get(
  *       content:
  *         application/json:
  *           schema:
- *             type: object
- *             properties:
- *               status:
- *                 type: string
- *                 example: active
- *               end_date:
- *                 type: string
- *                 format: date-time
- *               next_payment_date:
- *                 type: string
- *                 format: date-time
- *               is_exempted:
- *                 type: boolean
- *               exemption_reason:
- *                 type: string
- *               exempted_by:
- *                 type: integer
+ *             $ref: '#/components/schemas/UpdateSubscriptionDTO'
  *     responses:
  *       200:
  *         description: Assinatura atualizada com sucesso
@@ -286,14 +248,7 @@ subscriptionRoutes.put(
  *       content:
  *         application/json:
  *           schema:
- *             type: object
- *             properties:
- *               cancellation_reason:
- *                 type: string
- *                 example: Solicitação do cliente
- *               canceled_by:
- *                 type: integer
- *                 example: 1
+ *             $ref: '#/components/schemas/CancelSubscriptionDTO'
  *     responses:
  *       200:
  *         description: Assinatura cancelada com sucesso

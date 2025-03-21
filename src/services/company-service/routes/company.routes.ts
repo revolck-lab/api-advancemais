@@ -1,17 +1,16 @@
-// src/services/company-service/routes/company.routes.ts
-
 import { Router } from "express";
-import { PrismaClient } from "@prisma/client";
 import { CompanyController } from "../controllers/company.controller";
 import authMiddleware from "@shared/middleware/auth.middleware";
 import app from "@/app";
 
 /**
- * Rotas para operações de empresas
+ * Configuração de rotas para operações de empresas
+ * @module companyRoutes
  */
 const companyRoutes = Router();
-const prisma = app.prisma;
-const companyController = new CompanyController(prisma);
+
+// Inicializa o controller com a instância do Prisma do app
+const companyController = new CompanyController(app.prisma);
 
 /**
  * @swagger
@@ -25,53 +24,7 @@ const companyController = new CompanyController(prisma);
  *       content:
  *         application/json:
  *           schema:
- *             type: object
- *             properties:
- *               trade_name:
- *                 type: string
- *                 example: Advogados Associados LTDA
- *               business_name:
- *                 type: string
- *                 example: Sociedade de Advogados LTDA
- *               cnpj:
- *                 type: string
- *                 example: 12345678901234
- *               contact_name:
- *                 type: string
- *                 example: João da Silva
- *               email:
- *                 type: string
- *                 example: contato@advogados.com
- *               password:
- *                 type: string
- *                 example: Senha@123
- *               whatsapp:
- *                 type: string
- *                 example: 11999999999
- *               mobile_phone:
- *                 type: string
- *                 example: 11999999999
- *               landline_phone:
- *                 type: string
- *                 example: 1122223333
- *               address:
- *                 type: object
- *                 properties:
- *                   address:
- *                     type: string
- *                     example: Av. Paulista
- *                   number:
- *                     type: integer
- *                     example: 1000
- *                   city:
- *                     type: string
- *                     example: São Paulo
- *                   state:
- *                     type: string
- *                     example: SP
- *                   cep:
- *                     type: string
- *                     example: 01310100
+ *             $ref: '#/components/schemas/CreateCompanyDTO'
  *     responses:
  *       201:
  *         description: Empresa criada com sucesso
@@ -109,6 +62,11 @@ companyRoutes.post("/", companyController.createCompany);
  *         schema:
  *           type: integer
  *         description: Status (1=ativo, 0=inativo)
+ *       - in: query
+ *         name: search
+ *         schema:
+ *           type: string
+ *         description: Busca por nome, CNPJ ou e-mail
  *     responses:
  *       200:
  *         description: Lista de empresas retornada com sucesso
@@ -179,7 +137,7 @@ companyRoutes.get(
  *       content:
  *         application/json:
  *           schema:
- *             type: object
+ *             $ref: '#/components/schemas/UpdateCompanyDTO'
  *     responses:
  *       200:
  *         description: Empresa atualizada com sucesso
@@ -224,8 +182,11 @@ companyRoutes.put(
  *             properties:
  *               status:
  *                 type: integer
+ *                 enum: [0, 1]
  *                 example: 1
  *                 description: 1=ativo, 0=inativo
+ *             required:
+ *               - status
  *     responses:
  *       200:
  *         description: Status da empresa atualizado com sucesso
@@ -265,6 +226,21 @@ companyRoutes.patch(
  *     responses:
  *       200:
  *         description: Verificação realizada com sucesso
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 status:
+ *                   type: string
+ *                   example: success
+ *                 data:
+ *                   type: object
+ *                   properties:
+ *                     hasActiveSubscription:
+ *                       type: boolean
+ *                     companyId:
+ *                       type: integer
  *       401:
  *         description: Não autorizado
  *       404:

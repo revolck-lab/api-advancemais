@@ -1,5 +1,3 @@
-// src/services/company-service/services/subscription.service.ts
-
 import { PrismaClient } from "@prisma/client";
 import {
   CreateCompanySubscriptionDTO,
@@ -7,15 +5,13 @@ import {
   CancelSubscriptionDTO,
   SubscriptionFilters,
   SubscriptionListResult,
+  SubscriptionStatus,
 } from "../interfaces/subscription.interface";
 import { SubscriptionRepository } from "../repositories/subscription.repository";
 import { CompanyRepository } from "../repositories/company.repository";
 import { SubscriptionValidation } from "../validations/subscription.validation";
-import {
-  AppError,
-  NotFoundError,
-  ConflictError,
-} from "@shared/errors/app-error";
+import { NotFoundError, ConflictError } from "@shared/errors/app-error";
+import { ErrorLogger } from "@shared/utils/error-logger";
 
 /**
  * Serviço para operações relacionadas a assinaturas de empresas
@@ -24,6 +20,8 @@ import {
 export class SubscriptionService {
   private subscriptionRepository: SubscriptionRepository;
   private companyRepository: CompanyRepository;
+  private logger = ErrorLogger.getInstance();
+  private readonly CONTEXT = "SubscriptionService";
 
   /**
    * Construtor do serviço de assinaturas
@@ -42,65 +40,81 @@ export class SubscriptionService {
   async createSubscription(
     subscriptionData: CreateCompanySubscriptionDTO
   ): Promise<any> {
-    // Validar dados de entrada
-    const validatedData =
-      SubscriptionValidation.validateCreate(subscriptionData);
+    try {
+      // Validar dados de entrada
+      const validatedData =
+        SubscriptionValidation.validateCreate(subscriptionData);
 
-    // Verificar se a empresa existe
-    const company = await this.companyRepository.findById(
-      validatedData.company_id
-    );
-    if (!company) {
-      throw new NotFoundError(
-        `Empresa com ID ${validatedData.company_id} não encontrada`
-      );
-    }
-
-    // Verificar se a empresa já possui uma assinatura ativa
-    const existingSubscription =
-      await this.subscriptionRepository.findActiveByCompanyId(
+      // Verificar se a empresa existe
+      const company = await this.companyRepository.findById(
         validatedData.company_id
       );
-    if (existingSubscription) {
-      throw new ConflictError("Empresa já possui uma assinatura ativa");
-    }
+      if (!company) {
+        throw new NotFoundError(
+          `Empresa com ID ${validatedData.company_id} não encontrada`
+        );
+      }
 
-    // Verificar se o plano existe
-    const plan = await this.subscriptionRepository.findPlanById(
-      validatedData.plan_id
-    );
-    if (!plan) {
-      throw new NotFoundError(
-        `Plano com ID ${validatedData.plan_id} não encontrado`
+      // Verificar se a empresa já possui uma assinatura ativa
+      const existingSubscription =
+        await this.subscriptionRepository.findActiveByCompanyId(
+          validatedData.company_id
+        );
+      if (existingSubscription) {
+        throw new ConflictError("Empresa já possui uma assinatura ativa");
+      }
+
+      // Verificar se o plano existe
+      const plan = await this.subscriptionRepository.findPlanById(
+        validatedData.plan_id
       );
+      if (!plan) {
+        throw new NotFoundError(
+          `Plano com ID ${validatedData.plan_id} não encontrado`
+        );
+      }
+
+      // Preparar dados da assinatura
+      const now = new Date();
+      const subscriptionParams = {
+        id: validatedData.external_id || `sub_${Date.now()}`,
+        company_id: validatedData.company_id,
+        plan_id: validatedData.plan_id,
+        status: "active",
+        start_date: now,
+        end_date: null,
+        next_payment_date: new Date(now.getTime() + 30 * 24 * 60 * 60 * 1000), // 30 dias após o início
+        payment_method_id: validatedData.payment_method_id,
+        frequency: "monthly",
+        frequency_type: "months",
+        auto_recurring: validatedData.auto_recurring || true,
+        external_id: validatedData.external_id,
+        is_exempted: validatedData.is_exempted || false,
+        exemption_reason: validatedData.exemption_reason,
+        exempted_by: validatedData.exempted_by,
+        metadata: null,
+      };
+
+      // Criar a assinatura
+      const subscription = await this.subscriptionRepository.create(
+        subscriptionParams
+      );
+
+      this.logger.logInfo(
+        `Assinatura criada: ID ${subscription.id} para empresa ${validatedData.company_id}`,
+        this.CONTEXT
+      );
+      return subscription;
+    } catch (error) {
+      this.logger.logError(
+        error as Error,
+        `${this.CONTEXT}.createSubscription`,
+        {
+          subscriptionData,
+        }
+      );
+      throw error;
     }
-
-    // Preparar dados da assinatura
-    const now = new Date();
-    const subscriptionParams = {
-      id: validatedData.external_id || `sub_${Date.now()}`,
-      company_id: validatedData.company_id,
-      plan_id: validatedData.plan_id,
-      status: "active",
-      start_date: now,
-      end_date: null,
-      next_payment_date: new Date(now.getTime() + 30 * 24 * 60 * 60 * 1000), // 30 dias após o início
-      payment_method_id: validatedData.payment_method_id,
-      frequency: "monthly",
-      frequency_type: "months",
-      auto_recurring: validatedData.auto_recurring || true,
-      external_id: validatedData.external_id,
-      is_exempted: validatedData.is_exempted || false,
-      exemption_reason: validatedData.exemption_reason,
-      exempted_by: validatedData.exempted_by,
-      metadata: null,
-    };
-
-    // Criar a assinatura
-    const subscription = await this.subscriptionRepository.create(
-      subscriptionParams
-    );
-    return subscription;
   }
 
   /**
@@ -109,13 +123,22 @@ export class SubscriptionService {
    * @returns Assinatura encontrada
    */
   async getSubscriptionById(id: string): Promise<any> {
-    const subscription = await this.subscriptionRepository.findById(id);
+    try {
+      const subscription = await this.subscriptionRepository.findById(id);
 
-    if (!subscription) {
-      throw new NotFoundError(`Assinatura com ID ${id} não encontrada`);
+      if (!subscription) {
+        throw new NotFoundError(`Assinatura com ID ${id} não encontrada`);
+      }
+
+      return subscription;
+    } catch (error) {
+      this.logger.logError(
+        error as Error,
+        `${this.CONTEXT}.getSubscriptionById`,
+        { id }
+      );
+      throw error;
     }
-
-    return subscription;
   }
 
   /**
@@ -124,22 +147,33 @@ export class SubscriptionService {
    * @returns Assinatura ativa ou null
    */
   async getActiveSubscription(companyId: number): Promise<any> {
-    // Verificar se a empresa existe
-    const company = await this.companyRepository.findById(companyId);
-    if (!company) {
-      throw new NotFoundError(`Empresa com ID ${companyId} não encontrada`);
-    }
+    try {
+      // Verificar se a empresa existe
+      const company = await this.companyRepository.findById(companyId);
+      if (!company) {
+        throw new NotFoundError(`Empresa com ID ${companyId} não encontrada`);
+      }
 
-    const subscription =
-      await this.subscriptionRepository.findActiveByCompanyId(companyId);
+      const subscription =
+        await this.subscriptionRepository.findActiveByCompanyId(companyId);
 
-    if (!subscription) {
-      throw new NotFoundError(
-        `Empresa com ID ${companyId} não possui assinatura ativa`
+      if (!subscription) {
+        throw new NotFoundError(
+          `Empresa com ID ${companyId} não possui assinatura ativa`
+        );
+      }
+
+      return subscription;
+    } catch (error) {
+      this.logger.logError(
+        error as Error,
+        `${this.CONTEXT}.getActiveSubscription`,
+        {
+          companyId,
+        }
       );
+      throw error;
     }
-
-    return subscription;
   }
 
   /**
@@ -150,26 +184,36 @@ export class SubscriptionService {
   async listSubscriptions(
     filters: SubscriptionFilters
   ): Promise<SubscriptionListResult> {
-    // Validar e normalizar filtros
-    const validatedFilters = SubscriptionValidation.validateFilters(filters);
+    try {
+      // Validar e normalizar filtros
+      const validatedFilters = SubscriptionValidation.validateFilters(filters);
 
-    // Obter assinaturas filtradas
-    const { subscriptions, total } = await this.subscriptionRepository.findAll(
-      validatedFilters
-    );
+      // Obter assinaturas filtradas
+      const { subscriptions, total } =
+        await this.subscriptionRepository.findAll(validatedFilters);
 
-    // Calcular dados de paginação
-    const page = validatedFilters.page || 1;
-    const limit = validatedFilters.limit || 10;
-    const totalPages = Math.ceil(total / limit);
+      // Calcular dados de paginação
+      const page = validatedFilters.page || 1;
+      const limit = validatedFilters.limit || 10;
+      const totalPages = Math.ceil(total / limit);
 
-    return {
-      subscriptions,
-      total,
-      page,
-      limit,
-      totalPages,
-    };
+      return {
+        subscriptions,
+        total,
+        page,
+        limit,
+        totalPages,
+      };
+    } catch (error) {
+      this.logger.logError(
+        error as Error,
+        `${this.CONTEXT}.listSubscriptions`,
+        {
+          filters,
+        }
+      );
+      throw error;
+    }
   }
 
   /**
@@ -182,28 +226,42 @@ export class SubscriptionService {
     id: string,
     updateData: UpdateSubscriptionDTO
   ): Promise<any> {
-    // Validar dados de entrada
-    const validatedData = SubscriptionValidation.validateUpdate(updateData);
+    try {
+      // Validar dados de entrada
+      const validatedData = SubscriptionValidation.validateUpdate(updateData);
 
-    // Verificar se a assinatura existe
-    const subscription = await this.subscriptionRepository.findById(id);
-    if (!subscription) {
-      throw new NotFoundError(`Assinatura com ID ${id} não encontrada`);
+      // Verificar se a assinatura existe
+      const subscription = await this.subscriptionRepository.findById(id);
+      if (!subscription) {
+        throw new NotFoundError(`Assinatura com ID ${id} não encontrada`);
+      }
+
+      // Se o status está sendo alterado para cancelado, usar o método de cancelamento
+      if (validatedData.status === SubscriptionStatus.CANCELLED) {
+        return this.cancelSubscription(id, {
+          cancellation_reason: "Cancelado via atualização de status",
+        });
+      }
+
+      // Atualizar a assinatura
+      const updatedSubscription = await this.subscriptionRepository.update(
+        id,
+        validatedData
+      );
+
+      this.logger.logInfo(`Assinatura atualizada: ID ${id}`, this.CONTEXT);
+      return updatedSubscription;
+    } catch (error) {
+      this.logger.logError(
+        error as Error,
+        `${this.CONTEXT}.updateSubscription`,
+        {
+          id,
+          updateData,
+        }
+      );
+      throw error;
     }
-
-    // Se o status está sendo alterado para cancelado, usar o método de cancelamento
-    if (validatedData.status === "cancelled") {
-      return this.cancelSubscription(id, {
-        cancellation_reason: "Cancelado via atualização de status",
-      });
-    }
-
-    // Atualizar a assinatura
-    const updatedSubscription = await this.subscriptionRepository.update(
-      id,
-      validatedData
-    );
-    return updatedSubscription;
   }
 
   /**
@@ -216,39 +274,53 @@ export class SubscriptionService {
     id: string,
     cancelData: CancelSubscriptionDTO = {}
   ): Promise<any> {
-    // Validar dados de entrada
-    const validatedData = SubscriptionValidation.validateCancel(cancelData);
+    try {
+      // Validar dados de entrada
+      const validatedData = SubscriptionValidation.validateCancel(cancelData);
 
-    // Verificar se a assinatura existe
-    const subscription = await this.subscriptionRepository.findById(id);
-    if (!subscription) {
-      throw new NotFoundError(`Assinatura com ID ${id} não encontrada`);
-    }
+      // Verificar se a assinatura existe
+      const subscription = await this.subscriptionRepository.findById(id);
+      if (!subscription) {
+        throw new NotFoundError(`Assinatura com ID ${id} não encontrada`);
+      }
 
-    // Verificar se a assinatura já está cancelada
-    if (
-      subscription.status === "cancelled" ||
-      subscription.status === "ended"
-    ) {
-      throw new ConflictError(
-        `Assinatura com ID ${id} já está ${subscription.status}`
+      // Verificar se a assinatura já está cancelada
+      if (
+        subscription.status === SubscriptionStatus.CANCELLED ||
+        subscription.status === SubscriptionStatus.ENDED
+      ) {
+        throw new ConflictError(
+          `Assinatura com ID ${id} já está ${subscription.status}`
+        );
+      }
+
+      // Preparar metadados para o cancelamento
+      const metadata = {
+        cancellation_reason:
+          validatedData.cancellation_reason || "Cancelado pelo usuário",
+        canceled_by: validatedData.canceled_by,
+        canceled_at: new Date().toISOString(),
+      };
+
+      // Cancelar a assinatura (definir status, data de término e metadados)
+      const cancelledSubscription = await this.subscriptionRepository.cancel(
+        id,
+        JSON.stringify(metadata)
       );
+
+      this.logger.logInfo(`Assinatura cancelada: ID ${id}`, this.CONTEXT);
+      return cancelledSubscription;
+    } catch (error) {
+      this.logger.logError(
+        error as Error,
+        `${this.CONTEXT}.cancelSubscription`,
+        {
+          id,
+          cancelData,
+        }
+      );
+      throw error;
     }
-
-    // Preparar metadados para o cancelamento
-    const metadata = {
-      cancellation_reason:
-        validatedData.cancellation_reason || "Cancelado pelo usuário",
-      canceled_by: validatedData.canceled_by,
-      canceled_at: new Date().toISOString(),
-    };
-
-    // Cancelar a assinatura (definir status, data de término e metadados)
-    const cancelledSubscription = await this.subscriptionRepository.cancel(
-      id,
-      JSON.stringify(metadata)
-    );
-    return cancelledSubscription;
   }
 
   /**
@@ -257,8 +329,15 @@ export class SubscriptionService {
    * @returns Lista de planos
    */
   async listPlans(includeInactive: boolean = false): Promise<any[]> {
-    const status = includeInactive ? undefined : "active";
-    return this.subscriptionRepository.findAllPlans(status);
+    try {
+      const status = includeInactive ? undefined : "active";
+      return this.subscriptionRepository.findAllPlans(status);
+    } catch (error) {
+      this.logger.logError(error as Error, `${this.CONTEXT}.listPlans`, {
+        includeInactive,
+      });
+      throw error;
+    }
   }
 
   /**
@@ -267,12 +346,19 @@ export class SubscriptionService {
    * @returns Plano encontrado
    */
   async getPlanById(id: string): Promise<any> {
-    const plan = await this.subscriptionRepository.findPlanById(id);
+    try {
+      const plan = await this.subscriptionRepository.findPlanById(id);
 
-    if (!plan) {
-      throw new NotFoundError(`Plano com ID ${id} não encontrado`);
+      if (!plan) {
+        throw new NotFoundError(`Plano com ID ${id} não encontrado`);
+      }
+
+      return plan;
+    } catch (error) {
+      this.logger.logError(error as Error, `${this.CONTEXT}.getPlanById`, {
+        id,
+      });
+      throw error;
     }
-
-    return plan;
   }
 }
