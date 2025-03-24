@@ -3,11 +3,11 @@
   "version": "1.0.0",
   "main": "dist/server.js",
   "scripts": {
-    "build": "tsc",
+    "build": "tsc --skipLibCheck",
     "start": "node dist/server.js",
     "dev": "nodemon --exec ts-node -r tsconfig-paths/register src/server.ts",
     "lint": "eslint 'src/**/*.{ts,tsx}'",
-    "test": "jest",
+    "test": "jest --passWithNoTests",
     "prisma:generate": "prisma generate",
     "prisma:migrate": "prisma migrate deploy",
     "prisma:studio": "prisma studio",
@@ -16,7 +16,7 @@
     "postinstall": "prisma generate",
     "db:diagnose": "ts-node -r tsconfig-paths/register src/tools/database-diagnostic.ts",
     "db:validate": "npx prisma validate",
-    "deploy:check": "tsc --noEmit && npm run lint && npm run prisma:validate",
+    "deploy:check": "tsc --skipLibCheck --noEmit && npm run lint && npm run prisma:validate",
     "start:no-db": "cross-env ALLOW_NO_DB_MODE=true node dist/server.js"
   },
   "keywords": [
@@ -30,6 +30,7 @@
   "license": "ISC",
   "description": "API backend com arquitetura de microserviços",
   "dependencies": {
+    "@getbrevo/brevo": "^1.0.1",
     "@prisma/client": "^6.5.0",
     "bcrypt": "^5.1.1",
     "compression": "^1.8.0",

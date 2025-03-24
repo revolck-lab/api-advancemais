@@ -3,3 +3,4 @@ export * from "./database";
 export * from "./server";
 export * from "./mercadopago";
 export * from "./mail";
+export * from "./brevo";

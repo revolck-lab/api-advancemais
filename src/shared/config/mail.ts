@@ -3,10 +3,11 @@
  */
 import { config } from "./env";
 import { logger } from "../utils/logger";
+import { brevoConfig } from "./brevo";
 
 // Configurações de email
 export const mailConfig = {
-  // Configurações do servidor SMTP
+  // Servidor SMTP - mantido para compatibilidade
   host: process.env.SMTP_HOST || "smtp.example.com",
   port: parseInt(process.env.SMTP_PORT || "587", 10),
   secure: process.env.SMTP_SECURE === "true",
@@ -15,16 +16,18 @@ export const mailConfig = {
     pass: process.env.SMTP_PASS || "",
   },
 
-  // Configurações padrão de email
-  defaultFrom:
-    process.env.EMAIL_FROM || "AdvanceMais <noreply@advancemais.com.br>",
-  defaultReplyTo: process.env.EMAIL_REPLY_TO || "suporte@advancemais.com.br",
+  // Configurações padrão de email - usando Brevo
+  defaultFrom: brevoConfig.defaultFrom,
+  defaultReplyTo: brevoConfig.defaultReplyTo,
+
+  // Configuração de Brevo
+  brevo: brevoConfig,
 
   // Configuração de templates
   templatesDir: "src/services/notification-service/email-templates",
 
   // Verificação de configuração
-  isConfigured: !!process.env.SMTP_USER && !!process.env.SMTP_PASS,
+  isConfigured: brevoConfig.isConfigured,
 
   // Funções de utilidade
   getTemplateVars: () => ({
@@ -34,19 +37,12 @@ export const mailConfig = {
         : `http://localhost:${config.PORT}`,
     currentYear: new Date().getFullYear(),
     companyName: "AdvanceMais",
-    supportEmail: "suporte@advancemais.com.br",
+    supportEmail: brevoConfig.defaultReplyTo,
+    logoUrl: "https://advancemais.com.br/assets/logo.png",
   }),
 
   // Verificação do ambiente de email
   init: () => {
-    if (!mailConfig.isConfigured) {
-      logger.warn(
-        "Servidor de email não configurado. Emails não serão enviados."
-      );
-      return false;
-    }
-
-    logger.info("Configuração de email inicializada.");
-    return true;
+    return brevoConfig.init();
   },
 };

@@ -1,6 +1,5 @@
 import dotenv from "dotenv";
 
-// Carregar variáveis de ambiente
 dotenv.config();
 
 /**
@@ -22,6 +21,13 @@ interface EnvConfig {
   ALLOW_NO_DB_MODE: boolean;
   DB_MAX_RETRIES: number;
   DB_RETRY_DELAY: number;
+
+  // Brevo email service
+  BREVO_API_KEY?: string;
+  EMAIL_FROM: string;
+  EMAIL_FROM_NAME: string;
+  EMAIL_REPLY_TO: string;
+
   // Mercado Pago configs
   MERCADOPAGO_ACCESS_TOKEN?: string;
   MERCADOPAGO_PUBLIC_KEY?: string;
@@ -58,6 +64,13 @@ export const config: EnvConfig = {
   ALLOW_NO_DB_MODE: process.env.ALLOW_NO_DB_MODE === "true",
   DB_MAX_RETRIES: parseInt(process.env.DB_MAX_RETRIES || "5", 10),
   DB_RETRY_DELAY: parseInt(process.env.DB_RETRY_DELAY || "3000", 10),
+
+  // Brevo email service
+  BREVO_API_KEY: process.env.BREVO_API_KEY,
+  EMAIL_FROM: process.env.EMAIL_FROM || "noreply@advancemais.com.br",
+  EMAIL_FROM_NAME: process.env.EMAIL_FROM_NAME || "AdvanceMais",
+  EMAIL_REPLY_TO: process.env.EMAIL_REPLY_TO || "suporte@advancemais.com.br",
+
   // Mercado Pago configs
   MERCADOPAGO_ACCESS_TOKEN: process.env.MERCADOPAGO_ACCESS_TOKEN,
   MERCADOPAGO_PUBLIC_KEY: process.env.MERCADOPAGO_PUBLIC_KEY,
@@ -71,7 +84,12 @@ export const config: EnvConfig = {
 
 // Validação básica das variáveis necessárias para produção
 if (config.NODE_ENV === "production") {
-  const requiredEnvVars = ["DATABASE_URL", "JWT_SECRET", "CORS_ORIGIN"];
+  const requiredEnvVars = [
+    "DATABASE_URL",
+    "JWT_SECRET",
+    "CORS_ORIGIN",
+    "BREVO_API_KEY",
+  ];
 
   for (const envVar of requiredEnvVars) {
     if (!process.env[envVar]) {
