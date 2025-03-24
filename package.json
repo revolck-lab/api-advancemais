@@ -17,7 +17,9 @@
     "db:diagnose": "ts-node -r tsconfig-paths/register src/tools/database-diagnostic.ts",
     "db:validate": "npx prisma validate",
     "deploy:check": "tsc --skipLibCheck --noEmit && npm run lint && npm run prisma:validate",
-    "start:no-db": "cross-env ALLOW_NO_DB_MODE=true node dist/server.js"
+    "start:no-db": "cross-env ALLOW_NO_DB_MODE=true node dist/server.js",
+    "connectivity:check": "ts-node -r tsconfig-paths/register src/tools/connectivity-diagnostic.ts",
+    "debug:email": "ts-node -r tsconfig-paths/register src/services/notification-service/debug-email.ts"
   },
   "keywords": [
     "api",

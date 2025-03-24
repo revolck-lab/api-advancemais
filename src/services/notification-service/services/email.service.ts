@@ -1,6 +1,12 @@
 import { mailConfig } from "@shared/config/mail";
 import { logger } from "@shared/utils/logger";
-import brevo from "@getbrevo/brevo";
+
+let brevo: any;
+try {
+  brevo = require("@getbrevo/brevo");
+} catch (error) {
+  logger.error("Erro ao importar módulo @getbrevo/brevo:", error);
+}
 
 /**
  * Interface para os destinatários de email
@@ -42,8 +48,9 @@ export interface SendEmailOptions {
  * Classe para envio de emails utilizando a API Brevo
  */
 export class EmailService {
-  private apiInstance: brevo.TransactionalEmailsApi | null = null;
+  private apiInstance: any = null;
   private initialized: boolean = false;
+  private brewoLoaded: boolean = false;
 
   constructor() {
     this.initialized = this.initialize();
@@ -60,14 +67,63 @@ export class EmailService {
       return false;
     }
 
+    // Verificar se o módulo brevo foi importado
+    if (!brevo) {
+      logger.error(
+        "Módulo @getbrevo/brevo não disponível. Verifique a instalação."
+      );
+      this.brewoLoaded = false;
+      return false;
+    }
+
+    this.brewoLoaded = true;
+
     try {
+      // Determinar as classes corretas a serem usadas
+      const ApiClass =
+        brevo.TransactionalEmailsApi ||
+        (brevo.default && brevo.default.TransactionalEmailsApi);
+
+      if (!ApiClass) {
+        logger.error(
+          "Classe TransactionalEmailsApi não encontrada no módulo brevo"
+        );
+        return false;
+      }
+
       // Inicializar o cliente Brevo
-      const apiInstance = new brevo.TransactionalEmailsApi();
+      this.apiInstance = new ApiClass();
 
-      // Configurar autenticação usando método público
-      apiInstance.setApiKey(brevo.TransactionalEmailsApiApiKeys.apiKey, mailConfig.brevo.apiKey as string);
+      // Configurar autenticação
+      const ApiKeysEnum =
+        brevo.TransactionalEmailsApiApiKeys ||
+        (brevo.default && brevo.default.TransactionalEmailsApiApiKeys);
 
-      this.apiInstance = apiInstance;
+      if (typeof this.apiInstance.setApiKey === "function") {
+        // Se tiver o enum de API keys, use-o
+        if (ApiKeysEnum && ApiKeysEnum.apiKey) {
+          this.apiInstance.setApiKey(
+            ApiKeysEnum.apiKey,
+            mailConfig.brevo.apiKey as string
+          );
+        } else {
+          // Caso contrário, tente o valor direto
+          this.apiInstance.setApiKey(
+            "api-key",
+            mailConfig.brevo.apiKey as string
+          );
+        }
+      } else if (
+        this.apiInstance.authentications &&
+        this.apiInstance.authentications["api-key"]
+      ) {
+        // Alternativa: definir diretamente na autenticação
+        this.apiInstance.authentications["api-key"].apiKey =
+          mailConfig.brevo.apiKey;
+      } else {
+        logger.error("Não foi possível configurar a API key");
+        return false;
+      }
 
       logger.info("Serviço de email Brevo inicializado com sucesso.");
       return true;
@@ -85,12 +141,32 @@ export class EmailService {
   ): Promise<{ success: boolean; messageId?: string; error?: any }> {
     if (!this.initialized || !this.apiInstance) {
       logger.warn("Tentativa de envio de email com serviço não inicializado");
-      return { success: false, error: "Serviço de email não inicializado" };
+
+      // Tentar inicializar novamente
+      if (this.brewoLoaded) {
+        this.initialized = this.initialize();
+
+        // Se ainda falhou, retornar erro
+        if (!this.initialized) {
+          return { success: false, error: "Serviço de email não inicializado" };
+        }
+      } else {
+        return { success: false, error: "Módulo brevo não disponível" };
+      }
     }
 
     try {
+      // Determinar a classe correta a ser usada
+      const SendEmailClass =
+        brevo.SendSmtpEmail || (brevo.default && brevo.default.SendSmtpEmail);
+
+      if (!SendEmailClass) {
+        logger.error("Classe SendSmtpEmail não encontrada no módulo brevo");
+        return { success: false, error: "Classe SendSmtpEmail não disponível" };
+      }
+
       // Criar objeto de email para Brevo
-      const sendSmtpEmail = new brevo.SendSmtpEmail();
+      const sendSmtpEmail = new SendEmailClass();
 
       // Configurar destinatários
       sendSmtpEmail.to = options.to.map((recipient) => ({
@@ -152,6 +228,12 @@ export class EmailService {
         }));
       }
 
+      // Verificar se o método sendTransacEmail existe
+      if (typeof this.apiInstance.sendTransacEmail !== "function") {
+        logger.error("Método sendTransacEmail não disponível na instância API");
+        return { success: false, error: "Método de envio não disponível" };
+      }
+
       // Enviar email
       const result = await this.apiInstance.sendTransacEmail(sendSmtpEmail);
       logger.info(
@@ -204,6 +286,13 @@ export class EmailService {
           "Este é um email de teste enviado através da API Brevo. Se você está visualizando este email, significa que a configuração do serviço de email está funcionando corretamente.",
       },
     });
+  }
+
+  /**
+   * Reinicializa o serviço
+   */
+  reinitialize(): boolean {
+    return this.initialize();
   }
 }
 
