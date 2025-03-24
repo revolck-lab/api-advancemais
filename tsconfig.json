@@ -1,24 +1,24 @@
 {
-    "compilerOptions": {
-      "target": "ES2020",
-      "module": "commonjs",
-      "lib": ["ES2020"],
-      "outDir": "./dist",
-      "rootDir": "src_old",
-      "strict": true,
-      "esModuleInterop": true,
-      "skipLibCheck": true,
-      "forceConsistentCasingInFileNames": true,
-      "resolveJsonModule": true,
-      "baseUrl": ".",
-      "paths": {
-        "@/*": ["src_old/*"],
-        "@api-gateway/*": ["src_old/api-gateway/*"],
-        "@services/*": ["src_old/services/*"],
-        "@shared/*": ["src_old/shared/*"]
-      },
-      "typeRoots": ["./node_modules/@types", "src_old/@types"]
+  "compilerOptions": {
+    "target": "ES2020",
+    "module": "commonjs",
+    "lib": ["ES2020"],
+    "outDir": "./dist",
+    "rootDir": "src",
+    "strict": true,
+    "esModuleInterop": true,
+    "skipLibCheck": true,
+    "forceConsistentCasingInFileNames": true,
+    "resolveJsonModule": true,
+    "baseUrl": ".",
+    "paths": {
+      "@/*": ["src/*"],
+      "@gateway/*": ["src/gateway/*"],
+      "@services/*": ["src/services/*"],
+      "@shared/*": ["src/shared/*"]
     },
-    "include": ["src_old/**/*"],
-    "exclude": ["node_modules", "dist", "tests"]
+    "typeRoots": ["./node_modules/@types", "src/@types"]
+  },
+  "include": ["src/**/*"],
+  "exclude": ["node_modules", "dist", "tests"]
 }
